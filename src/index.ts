@@ -7,12 +7,23 @@
 
 export type { XuanAgent, XuanAgentOptions } from "./agent/index.js";
 export { createXuanAgent } from "./agent/index.js";
+export type { BaziCalculator } from "./calculators/index.js";
+export { Tyme4tsBaziCalculator } from "./calculators/index.js";
 export type { ConfigDoctorReport, ConfigSummary, XuanConfig } from "./config/index.js";
 export { diagnoseConfig, getConfigSummary, loadEnvFile, resolveConfig } from "./config/index.js";
 export type { XuanErrorCode, XuanErrorShape, XuanErrorStage } from "./errors/index.js";
 export { XUAN_ERROR_CODES, XuanError } from "./errors/index.js";
 export type {
+  BaziChart,
+  BaziChartSource,
+  FiveElementName,
+  LuckPillar,
+  Pillar,
+  TenGodRelation,
+} from "./schemas/bazi.js";
+export type {
   BirthInput,
+  BirthInputRequest,
   CalendarType,
   Gender,
   OutputMode,
