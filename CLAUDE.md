@@ -41,7 +41,7 @@ Entry (src/cli, src/index.ts SDK)
 - **Privacy**: sessions are local (user data dir), `temporary: true` skips persistence; profile save/delete require explicit `--confirm` (`PROFILE_PERMISSION_REQUIRED`); logs redact API keys and birth info — never echo `XUAN_API_KEY`.
 - **RAG**: keyword search only (no vector in V1); only `copyright_status: usable` entries enter the corpus; empty hit must report "未检索到明确依据", never invent a source.
 - **Docs are the source of truth** (Chinese): `docs/prd.md` → `docs/requirements.md` → `docs/product-architecture.md` → `docs/technical-design.md`; rationale in `docs/adr.md`. `GLOSSARY.md` holds canonical vocabulary (avoid its `_Avoid_` words).
-- **`docs/code-tour.md`** is the progressive code-reading guide (structure → dependencies → layer-by-layer, plus a review checklist and V2/Vision integration points). Start there when navigating the code. Its "Review 检查清单" lists known spec-vs-implementation gaps — check whether they still hold before acting on them.
+- **`docs/tour/`** is the progressive code-reading guide (01 全局 → 02 基础层 → 03 能力层 → 04 编排与入口 → 05 测试与 Review → 06 Vision 接入点 → 07 版本变更). Start at `docs/tour/README.md`. The layer docs always describe the **current** code; version deltas go in `07-版本变更.md`. The review checklist in `05` lists known spec-vs-implementation gaps — check whether they still hold before acting on them.
 
 ## Commands
 

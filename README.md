@@ -151,9 +151,9 @@ npm run pack:dry       # npm pack --dry-run
 - [`docs/product-architecture.md`](docs/product-architecture.md) —— 产品架构
 - [`docs/technical-design.md`](docs/technical-design.md) —— 技术设计（工程蓝图、契约、类型、流程、测试、里程碑）
 - [`docs/adr.md`](docs/adr.md) —— 架构决策记录（ADR）
-- [`docs/code-tour.md`](docs/code-tour.md) —— 代码导览（渐进式阅读指南，含 review 检查清单与 Vision 接入点）
+- [`docs/tour/`](docs/tour/README.md) —— 代码导览（渐进式阅读指南：全局 → 基础层 → 能力层 → 编排与入口 → 测试与 Review → Vision 接入点）
 
-文档顺序为 PRD → 详细需求规格 → 产品架构 → 技术设计；决策理由见 ADR。这些文档共同构成唯一事实来源。**读代码从 `docs/code-tour.md` 开始。**
+文档顺序为 PRD → 详细需求规格 → 产品架构 → 技术设计；决策理由见 ADR。这些文档共同构成唯一事实来源。**读代码从 [`docs/tour/`](docs/tour/README.md) 开始。**
 
 ## 贡献
 
