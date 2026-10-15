@@ -66,7 +66,7 @@ V1 不使用 monorepo。只有当后续出现独立前端、独立插件市场�
 | `src/workflows/` | LangGraph.js workflow 定义。 | 否 |
 | `src/skills/` | V1 Skills 与 SkillRegistry。 | 部分 |
 | `src/providers/` | ProviderFactory 和 LangChain.js adapters。 | 部分 |
-| `src/calculators/` | `BaziCalculator` 与 `lunar-typescript` adapter。 | 部分 |
+| `src/calculators/` | `BaziCalculator` 与 `tyme4ts` adapter。 | 部分 |
 | `src/rag/` | 知识库加载、chunk、embedding、检索、引用格式化。 | 部分 |
 | `src/conversations/` | 会话状态、checkpoint store。 | 否 |
 | `src/profiles/` | 本地用户档案 CRUD。 | 部分 |
@@ -134,7 +134,7 @@ src/
       anthropic.adapter.ts
   calculators/
     bazi-calculator.ts
-    lunar-typescript-calculator.ts
+    tyme4ts-calculator.ts
     bazi-normalizer.ts
   rag/
     rag-engine.ts
@@ -237,7 +237,7 @@ V1 至少需要以下脚本：
     "build": "build command decided in technical design",
     "typecheck": "tsc --noEmit",
     "test": "unit and integration tests",
-    "test:fixtures": "bazi fixture tests",
+    "test:fixtures": "bazi regression baseline tests",
     "test:smoke": "cli and sdk smoke tests",
     "lint": "lint command decided in technical design",
     "pack:dry": "npm pack --dry-run"
@@ -378,7 +378,7 @@ export interface BirthInput {
 ```ts
 export interface BaziChart {
   source: {
-    library: "lunar-typescript" | string;
+    library: "tyme4ts" | string;
     version?: string;
     generatedAt: string;
   };
@@ -397,7 +397,7 @@ export interface BaziChart {
   solarTerms?: SolarTermInfo;
   luckPillars?: LuckPillar[];
   annualFortune?: AnnualFortune[];
-  symbolicStars?: SymbolicStar[]; // V2（lunar-typescript 不支持，需自研）
+  symbolicStars?: SymbolicStar[]; // V2（库无命盘神煞，需自研）
   limitations: string[];
 }
 ```
@@ -916,19 +916,15 @@ Prompt 不得只传自然语言生日描述给 LLM。
 | RAG 引用 | 引用区分原文、释义和总结。 |
 | 档案保存 | 未确认不写入，确认后写入。 |
 
-### 27.3 fixture 测试
+### 27.3 回归基线（fixture）
 
-排盘 fixture 必须覆盖：
+期望值取自已验证的库输出（见 `product-architecture.md` §11），**用于防回归，不用于证明正确性**。
 
-- 公历日期。
-- 农历日期。
-- 节气边界。
-- 子时边界。
-- 不确定时辰。
-- 性别影响的大运方向。
-- 真太阳时关闭。
+基线覆盖：公历、农历、闰月、节气边界、子时边界、大运顺逆四象限。
 
-fixture 来源必须记录，不能只写期望结果而无依据。
+每例断言：年柱、月柱、日柱、时柱、日主、十神基础关系、大运基础信息、排盘来源。
+
+期望值的来源与验证方式必须记录在基线文件里。
 
 ### 27.4 smoke 测试
 
@@ -968,11 +964,11 @@ await agent.getConfigSummary();
 完成：
 
 - `BaziCalculator`
-- `lunar-typescript` adapter
+- `tyme4ts` adapter
 - `BaziChart`
 - `xuan bazi analyze`
 - mock Provider 解读
-- 排盘 fixture 测试
+- 排盘回归基线测试
 
 ### 28.3 Milestone 3：Provider 与 Prompt
 
@@ -1014,7 +1010,7 @@ V1 不包含相术。图像输入校验、Vision capability、`xiangshu-face`、
 | PRD 需求 | 架构承载 |
 | --- | --- |
 | FR-BAZI-01 出生信息采集 | `BirthInput`、CLI/API/SDK validation。 |
-| FR-BAZI-02 确定性排盘 | `BaziCalculator`、`BaziChart`、排盘样例集。 |
+| FR-BAZI-02 确定性排盘 | `BaziCalculator`、`BaziChart`、排盘回归基线。 |
 | FR-BAZI-03 通俗模式解读 | `bazi` Skill、PromptManager、SafetyGuard。 |
 | FR-BAZI-04 进阶模式解读 | `bazi` Skill、RagEngine、RagCitation。 |
 | FR-BAZI-05 追问与同盘复用 | ConversationState、LangGraphWorkflow、ConversationStore。 |
@@ -1039,8 +1035,8 @@ V1 不包含相术。图像输入校验、Vision capability、`xiangshu-face`、
 - 明确 HTTP API 的请求、响应、文件上传、streaming 和错误码。
 - 写出 LangGraph.js workflow 的具体节点函数、边、checkpoint 配置和状态 reducer。
 - 写出 LangChain.js Provider adapter 的具体依赖、模型初始化和 mock provider。
-- 验证 `lunar-typescript` API，并完成 `BaziChart` 字段映射表。
+- 验证 `tyme4ts` API，并完成 `BaziChart` 字段映射表。
 - 设计 RAG chunk size、embedding provider、vector store 和 index rebuild 命令。
 - 落地 Prompt 模板文件、版本号策略和回归测试样例。
 - 落地 SafetyGuard 的规则表、测试样例和输出审计策略。
-- 建立排盘 fixture 来源、期望输出和自动化验证命令。
+- 落地排盘回归基线的期望输出与自动化验证命令。

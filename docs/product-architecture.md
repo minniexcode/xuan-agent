@@ -24,7 +24,7 @@ V1 采用 **TypeScript-first + npm package + CLI/SDK 一体** 的产品架构。
 - SDK 入口使用 `xuan-agent`，供 CLI、HTTP API、脚本和后续上层应用复用。
 - Agent 编排使用 LangGraph.js。
 - LLM 抽象使用 LangChain.js，并通过 Provider Factory 隔离不同模型服务。
-- 八字确定性排盘优先使用 `lunar-typescript`，并通过 `BaziCalculator` 接口隔离具体排盘库。
+- 八字确定性排盘优先使用 `tyme4ts`，并通过 `BaziCalculator` 接口隔离具体排盘库。
 - 相术（V2）使用 Vision-capable LLM，不引入额外 CV 模型。
 - RAG、用户档案、会话状态和配置均本地优先。
 - Python 不进入 V1 默认架构，只作为未来确定性计算能力不足时的后备 adapter 方向。
@@ -34,7 +34,7 @@ V1 采用 **TypeScript-first + npm package + CLI/SDK 一体** 的产品架构。
 - 玄枢 V1 更像开发者工具型 Agent，而不是纯 AI/ML pipeline。
 - CLI、SDK、插件化、npm 分发、MCP/IDE/桌面端扩展和 Web 集成都更贴近 TS/npm 生态。
 - npm 包可同时承载命令行工具和可复用 SDK，便于个人使用、开源传播和后续集成。
-- `lunar-typescript` 能作为 V1 八字计算起点，但必须通过样例集验证排盘准确性。
+- `tyme4ts` 作为 V1 八字计算库；排盘准确性已通过三实现交叉对拍验证（见 §11）。
 
 ## 2. 架构目标
 
@@ -295,7 +295,7 @@ npm 包不得包含：
 | 发布 | npm package | 便于 CLI 安装、SDK 复用和开源分发。 |
 | Agent 编排 | LangGraph.js | 用于有状态 Agent 流程和会话 checkpoint。 |
 | LLM 抽象 | LangChain.js | 统一 Provider 调用、structured output、streaming 和工具链。 |
-| 八字排盘 | `lunar-typescript` | 通过 `BaziCalculator` 适配，不让业务层直接依赖第三方对象。 |
+| 八字排盘 | `tyme4ts` | 通过 `BaziCalculator` 适配，不让业务层直接依赖第三方对象。 |
 | RAG | 本地知识库 + 可替换向量存储 | V1 小规模起步，技术设计阶段再定具体向量库。 |
 | 用户档案 | 本地 JSON | 后续可升级 SQLite、PostgreSQL 或其他 DB。 |
 | 配置 | `.env` 或等价本地配置 | API key 不进入日志和普通输出。 |
@@ -314,9 +314,9 @@ npm 包不得包含：
 
 ### 5.3 Python 的定位
 
-早期草稿曾以 `lunar-python` 为排盘库示例；本产品架构将其调整为 TS 生态的 `lunar-typescript`，V1 默认采用。Python 仅作为确定性计算能力不足时的后备 adapter 方向。
+早期草稿曾以 `lunar-python` 为排盘库示例，后调整为 TS 生态的 `lunar-typescript`，最终选定 **`tyme4ts`**（同作者的新一代实现，节气采用寿星天文历算法）。Python 仅作为确定性计算能力不足时的后备 adapter 方向。
 
-Python 不进入 V1 默认依赖。只有当 `lunar-typescript` 在节气、大运、流年、神煞或流派差异等关键能力上无法满足样例校验时，才考虑：
+Python 不进入 V1 默认依赖。只有当 `tyme4ts` 在节气、大运、流年、神煞或流派差异等关键能力上无法满足验证时，才考虑：
 
 - 替换 TypeScript 排盘库。
 - 自行补充 `BaziCalculator` 规则。
@@ -372,7 +372,7 @@ Python 不进入 V1 默认依赖。只有当 `lunar-typescript` 在节气、大�
 - `BaziChart` 必须先生成，再进入 LLM 解读。
 - Prompt 中必须包含结构化 `BaziChart`，不能只包含用户生日。
 - 排盘失败必须返回明确错误，不得让 LLM 编造结果。
-- 业务层不得直接依赖 `lunar-typescript` 原始对象。
+- 业务层不得直接依赖 `tyme4ts` 原始对象。
 
 ### 6.3 `BaziCalculator`
 
@@ -387,7 +387,7 @@ Python 不进入 V1 默认依赖。只有当 `lunar-typescript` 在节气、大�
 
 V1 默认实现：
 
-- `LunarTypescriptBaziCalculator`
+- `Tyme4tsBaziCalculator`
 
 替换原则：
 
@@ -798,39 +798,30 @@ V1 至少记录以下脱敏调试信息：
 
 ## 11. 排盘准确性验证
 
-TypeScript-first 的主要风险在八字计算细节。V1 必须建立排盘样例集验证 `lunar-typescript` 输出。
+TypeScript-first 的主要风险在八字计算细节。
 
-样例集至少覆盖：
+### 11.1 已验证（2026-10）
 
-- 公历生日。
-- 农历生日。
-- 不确定时辰。
-- 节气附近日期。
-- 不同出生时间段。
-- 不同性别的大运顺逆。
-- 农历换算。
-- 真太阳时关闭状态。
+对 V1 排盘库做过一次**三实现交叉对拍**（`tyme4ts`、`lunar-typescript`、`cnlunar`），21 个用例覆盖公历 / 农历 / 闰月 / 节气边界 / 子时 / 大运顺逆四象限：
 
-样例期望值以**问真**（`pcbz.iwzwh.com`）排盘为金标准，需人工转录（问真无公开 API）。需特别覆盖两类已知风险：**节气边界**（`lunar-typescript` 的 `getNextJieQi` / `getPrevJie` 有 bug，可影响月柱）与**晚子时**（23:00–23:59，日柱流派分歧，见 `EightChar.sect`）。
+- `tyme4ts` 与 `lunar-typescript` 结果一致（仅晚子时默认流派不同）。
+- 两者的节气时刻与权威值**逐秒吻合**（例：惊蛰 1992-03-05 15:52:08、立秋 1985-08-07 22:04:16）。
+- `cnlunar` 的节气处理有偏差、月柱算错，**已排除**。
 
-每个样例至少断言：
+结论：`tyme4ts` 的排盘（含节气边界、农历、闰月、立春分界）可信，**不需要 fork 修 bug**。
 
-- 年柱。
-- 月柱。
-- 日柱。
-- 时柱或不确定时辰提示。
-- 日主。
-- 五行基础分布。
-- 十神基础关系。
-- 大运基础信息。
-- 排盘来源。
+### 11.2 回归基线
 
-验证原则：
+V1 保留一份**最小回归基线**（`tests/fixtures/`）：期望值取自已验证的库输出，用于防止后续重构或升级库时结果悄然变化。它**不用于证明正确性，只用于防回归**。
+
+基线覆盖：节气边界、晚子时、闰月、农历换算、大运顺逆四象限。每例断言年柱、月柱、日柱、时柱、日主、十神基础关系、大运基础信息与排盘来源。
+
+### 11.3 验证原则
 
 - 排盘失败时返回明确错误。
-- 样例不通过时不得让 LLM 修正。
+- 出现差异时不得让 LLM 修正。
 - 只能修正 `BaziCalculator` 或替换确定性排盘库。
-- 流派差异大的内容必须允许标记“未支持”“待确认”或“不同流派可能有不同看法”。
+- 流派差异大的内容（格局、神煞）必须允许标记“未支持”“待确认”或“不同流派可能有不同看法”。
 
 ## 12. 错误处理与降级
 

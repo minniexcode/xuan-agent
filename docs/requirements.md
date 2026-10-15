@@ -105,27 +105,37 @@ V1 个人使用不会触发，仅保证 schema 不崩：
 ### 处理规则
 
 1. 排盘先于 LLM；失败即返回明确错误，不进入解读，不得编造。
-2. 业务层只依赖 `BaziCalculator` 接口，不直接使用 `lunar-typescript` 原始对象。
+2. 业务层只依赖 `BaziCalculator` 接口，不直接使用 `tyme4ts` 原始对象。
 3. 库无法提供的字段显式标记缺失/unsupported，不得由 LLM 补全。
-4. 输出标注排盘来源（`lunar-typescript` + 版本）。
+4. 输出标注排盘来源（`tyme4ts` + 版本）。
 5. 大运步数与流年范围做成参数，默认值可调。
+6. 出生时间落在 23:00–23:59 时，必须在 `limitations` 中标注所用的晚子时流派。
 
-### 库能力核查（`lunar-typescript` 1.8.6）
+### 库能力核查（`tyme4ts` 1.5.3）
 
-- **八字 API**：`Lunar.getEightChar()` → `EightChar`。每柱提供干支、藏干、五行、纳音、十神（干 / 支）、地势、旬、旬空；日主 = `getDayGan()`。另有胎元 / 胎息 / 命宫 / 身宫。
-- **大运 / 流年**：`getYun(gender, sect)` → `Yun`，提供起运时间、`isForward()`、`getDaYun(n=10)`；`DaYun` 可下钻流年、流月、小运。**流日无**。
-- **性别**：`getYun(gender)`，1 = 男，0 = 女。
-- **子时**：`EightChar.setSect(1|2)`，默认 **2**。流派 1：晚子时（23:00–23:59）日柱算**次日**；流派 2：算**当日**。两派都认为晚子时**时柱**取次日。
-- **农历 / 闰月**：支持；闰月用负月份表示（`-4` = 闰四月）。
-- **真太阳时**：**不支持**，需外部计算 → V2。
-- **神煞**：**不支持**命盘神煞（仅黄历级吉神 / 凶煞）→ V1 不做。
-- **已知问题**：节气边界 `getNextJieQi` / `getPrevJie` 有 bug（**可影响月柱**）；晚子时时柱有流派争议；起运精度。
+- **八字 API**：`SolarTime.fromYmdHms(...).getLunarHour().getEightChar()` → `EightChar`；四柱取 `getYear/Month/Day/Hour()`，每柱为 `SixtyCycle`。日主 = `getDay().getHeavenStem()`。
+- **每柱可取**：天干、地支、**藏干**（`EarthBranch.getHideHeavenStems()`）、纳音（`getSound()`）、旬（`getTen()`）、**十神**（`HeavenStem.getTenStar(other)`）、地势（`getTerrain()`）、地支合害。
+- **命宫 / 身宫 / 胎元 / 胎息**：`getOwnSign()` / `getBodySign()` / `getFetalOrigin()` / `getFetalBreath()`。
+- **大运**：`ChildLimit.fromSolarTime(solarTime, gender)` → 起运信息、`isForward()`、`getStartDecadeFortune()`；`DecadeFortune` 可 `next()` 迭代，含 `getSixtyCycle()` 与 `getStartAge()`。
+- **性别**：`Gender.MAN` / `Gender.WOMAN`。
+- **农历 / 闰月**：支持；`LunarHour.fromYmdHms(y, m, d, h, m, s)`，闰月用负月份表示（`-4` = 闰四月）。
+- **子时流派**：库默认"晚子时日柱算**次日**"；提供多个 provider（如 `DefaultEightCharProvider` / `LunarSect2EightCharProvider`）可切换。
+- **真太阳时**：未提供 API，需外部计算 → V2。
+- **神煞**：仅有黄历级内容（`God` / `Duty` / `Taboo` 等），**无命盘神煞** → V1 不做。
 
-### 流派开关（待 fixture 校准）
+### 验证结论（2026-10）
 
-- **`EightChar.sect`**（晚子时日柱）：V1 先用库默认 `sect=2`，并在 fixture 中专设晚子时样例与问真对拍，对不上再切 `sect=1`。
-- **`Yun.sect`**（起运算法）：默认 1（3 天 = 1 年）。
-- 注意：这是**两个不同**的流派开关，不要混。
+三实现交叉对拍 21 例（`tyme4ts` / `lunar-typescript` / `cnlunar`）：`tyme4ts` 与 `lunar-typescript` 结果一致，节气时刻与权威值**逐秒吻合**；`cnlunar` 节气有误，已排除。详见 `product-architecture.md` §11。
+
+### 流派开关
+
+**晚子时日柱**（23:00–23:59）：V1 默认**算次日**（23:00 换日）。
+
+- 理由：与主流排盘软件一致——问真、元亨利贞、易运盘、问道八字、卜易居**均默认次日**（问真已通过其线上接口验证）；`tyme4ts` 默认也是次日。注意古典**历法**传统主张"子正换日"（即当日），与术数**排盘**的通行实践相反，故此项需保留可切换。见 [ADR-0010](adr.md)。
+- 切换方式：`LunarHour.provider` —— `DefaultEightCharProvider` = 次日（默认），`LunarSect2EightCharProvider` = 当日。注意这是 `LunarHour` 的**静态属性**，不是 `EightChar` 上的开关。
+- **术语警告**：各来源对"早子时 / 晚子时"的定义不一致（问真的定义甚至与常见用法相反）。**代码与规格只按 23:00 边界与"当日 / 次日"表述，不得用这两个词做判断逻辑。**
+
+**起运算法**：按库默认。
 
 ### 验收标准
 
@@ -133,7 +143,7 @@ V1 个人使用不会触发，仅保证 schema 不崩：
 - Prompt 含结构化 `BaziChart`，而非仅生日字符串。
 - 排盘失败返回明确错误，不产生解读。
 - 输出标明排盘来源。
-- 节气边界与晚子时样例必须与问真对拍通过。
+- 节气边界用例与权威节气时刻一致（已验证，见 `product-architecture.md` §11）。
 
 ### 明确不做（V2）
 

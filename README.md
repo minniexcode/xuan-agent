@@ -51,10 +51,10 @@ V1 明确不做：相术图像分析、多 Provider 对比、HTTP API 交付（�
 | 交付形态 | 单一 npm 包 `xuan-agent`：CLI 命令 `xuan` + SDK 入口 `xuan-agent`，无 monorepo |
 | Agent 编排 | LangGraph.js |
 | LLM 抽象 | LangChain.js + `ProviderFactory`（OpenAI / Anthropic / DeepSeek / 通用 OpenAI 兼容） |
-| 八字计算 | `lunar-typescript`，隔离在 `BaziCalculator` 接口之后 |
+| 八字计算 | `tyme4ts`，隔离在 `BaziCalculator` 接口之后 |
 | RAG / 档案 / 会话 / 配置 | 全部本地优先 |
 
-Python **不是** V1 默认依赖，仅在 `lunar-typescript` 未通过样例集验证时作为 `BaziCalculator` 的后备 adapter 方向。
+Python **不是** V1 默认依赖，仅在 `tyme4ts` 能力不足时作为 `BaziCalculator` 的后备 adapter 方向。
 
 CLI 框架、HTTP 框架、构建工具、schema 库、测试框架与向量存储等框架级选择，留待[技术设计文档](docs/technical-design.md)确定。
 
@@ -119,7 +119,7 @@ const result = await agent.analyzeBazi({
 ```bash
 npm run typecheck      # tsc --noEmit
 npm test               # 单元 + 集成测试
-npm run test:fixtures  # 八字样例集测试
+npm run test:fixtures  # 八字回归基线
 npm run test:smoke     # CLI / SDK 冒烟测试
 npm run build
 npm run pack:dry       # npm pack --dry-run
