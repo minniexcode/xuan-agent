@@ -4,7 +4,7 @@
 
 玄枢用确定性算法完成排盘与结构化计算，再由 LLM 做中性、可解释、可追问的解读。它不试图把玄学包装成确定性预测系统，而是把排盘、术语解释、古籍引用、个人档案和连续对话整合成一个可追溯、有节制的工具。
 
-**项目状态：规划阶段（pre-implementation）。** 仓库当前只有产品与架构文档，`src/` 为空，尚无 `package.json`。下方命令与 API 均为已确定的设计契约，尚未实现。
+**项目状态：V1 功能已实现（Milestone 1–5），处于 npm 预发布准备阶段。** 八字排盘、通俗/进阶解读、同盘追问、RAG 检索、会话记忆与用户档案均已落地；相术与多 Provider 对比为 V2。
 
 ## 它是什么，不是什么
 
@@ -49,8 +49,8 @@ V1 明确不做：相术图像分析、多 Provider 对比、HTTP API 交付（�
 | --- | --- |
 | 语言 / 运行时 | TypeScript-first，Node.js（`"type": "module"`，`>= 20`） |
 | 交付形态 | 单一 npm 包 `xuan-agent`：CLI 命令 `xuan` + SDK 入口 `xuan-agent`，无 monorepo |
-| Agent 编排 | LangGraph.js |
-| LLM 抽象 | LangChain.js + `ProviderFactory`（OpenAI / Anthropic / DeepSeek / 通用 OpenAI 兼容） |
+| Agent 编排 | 自研 `XuanAgent` 线性流程（V1 不引入 LangGraph.js，见 [ADR-0011](docs/adr.md)） |
+| LLM 抽象 | 自研 `LlmProvider` + `ProviderFactory`（openai-compatible 走 `fetch`） |
 | 八字计算 | `tyme4ts`，隔离在 `BaziCalculator` 接口之后 |
 | RAG / 档案 / 会话 / 配置 | 全部本地优先 |
 
@@ -61,11 +61,10 @@ CLI 框架、HTTP 框架、构建工具、schema 库、测试框架与向量存�
 ## 架构分层
 
 ```text
-Entry（CLI / SDK / HTTP API adapters）
-  → Orchestration（XuanAgent / LangGraphWorkflow / ConversationStateManager）
-    → Skill（bazi / rag-reference / profile / provider-compare）
-      → Foundation（BaziCalculator / ProviderFactory / RagEngine / ConversationStore
-                    / ProfileStore / PromptManager / SafetyGuard / ConfigManager / Logger）
+Entry（CLI / SDK）
+  → Orchestration（XuanAgent）
+    → Foundation（BaziCalculator / ProviderFactory / RagEngine / ConversationStore
+                  / ProfileStore / PromptManager / SafetyGuard / ConfigManager / Logger）
 ```
 
 规划目录：
@@ -81,23 +80,31 @@ knowledge/seed/   # 最小知识库种子
 examples/  tests/
 ```
 
-## 安装与使用（尚未实现）
+## 安装与使用
 
-目标 CLI 用法：
+先配置 `.env`（复制 `.env.example` 填入 API key）：
 
 ```bash
-npx xuan-agent bazi analyze --date 1995-03-12 --time 08:30 --gender male --calendar solar
-xuan bazi analyze    # 八字分析
-xuan bazi ask        # 围绕结果追问
-xuan rag search      # RAG 检索测试
-xuan provider list   # 查看 Provider
-xuan profile view|save|delete
-xuan config doctor   # 查看当前配置
+cp .env.example .env
 ```
 
-`xuan xiangshu analyze` 与 `xuan provider compare` 属 V2 能力，V1 不交付。
+CLI 用法：
 
-目标 SDK 用法：
+```bash
+npm run build
+node dist/cli/main.js bazi analyze --date 1995-03-12 --time 08:30 --gender male --calendar solar
+node dist/cli/main.js bazi ask --session <id> --question "什么是正印？"   # 同盘追问
+node dist/cli/main.js rag search --query "正印"                            # RAG 检索
+node dist/cli/main.js provider list                                        # Provider 能力表
+node dist/cli/main.js profile save --date 1995-03-12 --time 08:30 --gender male --calendar solar --confirm
+node dist/cli/main.js profile view
+node dist/cli/main.js session clear                                        # 清理会话
+node dist/cli/main.js config doctor                                        # 查看配置
+```
+
+发布后以 `xuan` 命令替代 `node dist/cli/main.js`。`xuan xiangshu analyze` 与 `xuan provider compare` 属 V2 能力，V1 不交付。
+
+SDK 用法：
 
 ```ts
 import { createXuanAgent } from "xuan-agent";
@@ -108,13 +115,14 @@ const result = await agent.analyzeBazi({
   time: "08:30",
   gender: "male",
   calendar: "solar",
-  mode: "beginner",
 });
+const followup = await agent.askFollowup({ question: "什么是正印？" }); // 续最近会话
+const hits = await agent.searchRag({ query: "正印" });
 ```
 
 参数名与 schema 以[技术设计文档](docs/technical-design.md)为准。
 
-开发脚本（契约，待实现）：
+开发脚本（已实现）：
 
 ```bash
 npm run typecheck      # tsc --noEmit

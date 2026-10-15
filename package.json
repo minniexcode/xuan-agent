@@ -21,7 +21,8 @@
     "dist",
     "knowledge/seed",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    ".env.example"
   ],
   "engines": {
     "node": ">=20"
