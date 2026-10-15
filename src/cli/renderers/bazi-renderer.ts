@@ -38,11 +38,20 @@ export function renderAnalysisResult(result: AnalysisResult<BaziChart>): string 
     "",
     `解读（${result.provider.model}）：`,
     result.content.summary.trim() || "（空）",
-    "",
-    result.content.boundaryNotice,
   ];
+  if (result.citations.length > 0) {
+    lines.push("", "参考依据：");
+    result.citations.forEach((citation, i) => {
+      lines.push(`  ${i + 1}. ${citation.sourceName}：${citation.excerpt}`);
+    });
+  }
+  lines.push("", result.content.boundaryNotice);
   if (result.safety.warnings.length > 0) {
     lines.push("", "安全提示：", ...result.safety.warnings.map((w) => `  - ${w}`));
   }
+  lines.push(
+    "",
+    `会话 ID：${result.sessionId}（追问：xuan bazi ask --session ${result.sessionId} --question "…"）`,
+  );
   return lines.join("\n");
 }

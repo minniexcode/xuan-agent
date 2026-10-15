@@ -587,7 +587,9 @@ HTTP API 不是 V1 主入口，也不是 V1 交付物，仅在仓库保留骨架
 - API 不直接访问 Provider、RAG、ProfileStore 或排盘库。
 - Streaming 可在技术设计阶段选择 SSE 或 chunked response。
 
-## 21. LangGraph Workflow 详细设计
+## 21. Workflow 详细设计
+
+> V1 实现为 `XuanAgent` 内的线性流程（校验 → 排盘 → Prompt → LLM → 审计 → 存会话），不引入 LangGraph.js（ADR-0011）。以下节点图仍作为流程步骤参考。
 
 ### 21.1 统一状态
 
@@ -712,7 +714,7 @@ ProviderFactory 负责：
 
 - 读取 ProviderConfig。
 - 检查必填配置。
-- 创建 LangChain.js model 实例。
+- 创建 `LlmProvider` 实例（V1 自研 openai-compatible adapter，无 LangChain，见 ADR-0011）。
 - 包装为统一 `LlmProvider`。
 - 暴露 capability。
 
@@ -1013,13 +1015,13 @@ V1 不包含相术。图像输入校验、Vision capability、`xiangshu-face`、
 | FR-BAZI-02 确定性排盘 | `BaziCalculator`、`BaziChart`、排盘回归基线。 |
 | FR-BAZI-03 通俗模式解读 | `bazi` Skill、PromptManager、SafetyGuard。 |
 | FR-BAZI-04 进阶模式解读 | `bazi` Skill、RagEngine、RagCitation。 |
-| FR-BAZI-05 追问与同盘复用 | ConversationState、LangGraphWorkflow、ConversationStore。 |
-| FR-MEM-01 对话级记忆 | LangGraph checkpointer、ConversationState、ConversationStore。 |
+| FR-BAZI-05 追问与同盘复用 | ConversationState、ConversationStore。 |
+| FR-MEM-01 对话级记忆 | ConversationState、ConversationStore。 |
 | FR-MEM-02 用户档案级记忆 | UserProfile、ProfileStore、本地 JSON。 |
 | FR-RAG-01 知识库内容管理 | Local knowledge base、RagEngine、source metadata。 |
 | FR-RAG-02 检索与引用 | RagCitation、RagEngine、PromptManager。 |
 | FR-LLM-01 Provider 配置 | ProviderConfig、ConfigManager。 |
-| FR-LLM-02 Provider 工厂与统一调用 | ProviderFactory、LangChain.js adapter。 |
+| FR-LLM-02 Provider 工厂与统一调用 | ProviderFactory、openai-compatible adapter。 |
 | FR-LLM-03 多 Provider 对比（V1 后） | provider-compare Skill、frozen input reuse。 |
 | FR-SKILL-01 V1 Skills 注册 | SkillManifest、SkillRegistry。 |
 | FR-SKILL-02 后续扩展规则 | Skill interface、Foundation Layer reuse。 |
@@ -1033,8 +1035,8 @@ V1 不包含相术。图像输入校验、Vision capability、`xiangshu-face`、
 - 定义完整 TypeScript type、runtime schema 和错误响应对象。
 - 明确每个 CLI 命令的参数名、默认值、退出码和输出格式。
 - 明确 HTTP API 的请求、响应、文件上传、streaming 和错误码。
-- 写出 LangGraph.js workflow 的具体节点函数、边、checkpoint 配置和状态 reducer。
-- 写出 LangChain.js Provider adapter 的具体依赖、模型初始化和 mock provider。
+- 写出 workflow 的具体节点函数与状态（V1 为线性流程，不引入 LangGraph，见 ADR-0011）。
+- 写出 Provider adapter 的具体依赖、模型初始化和 mock provider（已实现 openai-compatible + mock，无 LangChain）。
 - 验证 `tyme4ts` API，并完成 `BaziChart` 字段映射表。
 - 设计 RAG chunk size、embedding provider、vector store 和 index rebuild 命令。
 - 落地 Prompt 模板文件、版本号策略和回归测试样例。

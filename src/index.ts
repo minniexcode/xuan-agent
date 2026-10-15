@@ -27,12 +27,22 @@ export {
   OpenAiCompatibleProvider,
   ProviderFactory,
 } from "./providers/index.js";
+export type {
+  CitationContentKind,
+  CopyrightStatus,
+  KnowledgeChunk,
+  KnowledgeDomain,
+  RagSearchOptions,
+  RagSearchResult,
+} from "./rag/index.js";
+export { RagEngine } from "./rag/index.js";
 export type { SafetyAudit } from "./safety/index.js";
 export { SafetyGuard } from "./safety/index.js";
 export type {
   AnalysisRequest,
   AnalysisResult,
   AnalysisSection,
+  FollowupInput,
   RagCitation,
 } from "./schemas/analysis.js";
 export { BOUNDARY_NOTICE } from "./schemas/analysis.js";

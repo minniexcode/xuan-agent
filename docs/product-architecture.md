@@ -22,8 +22,7 @@ V1 采用 **TypeScript-first + npm package + CLI/SDK 一体** 的产品架构。
 - npm 包名暂定 `xuan-agent`，发布前检查 npm registry 名称可用性。
 - CLI 命令名使用 `xuan`。
 - SDK 入口使用 `xuan-agent`，供 CLI、HTTP API、脚本和后续上层应用复用。
-- Agent 编排使用 LangGraph.js。
-- LLM 抽象使用 LangChain.js，并通过 Provider Factory 隔离不同模型服务。
+- Agent 编排与 LLM 抽象使用轻量自研层（`XuanAgent` 线性流程 + `LlmProvider`/`ProviderFactory`），V1 不引入 LangGraph.js / LangChain.js（ADR-0011）。
 - 八字确定性排盘优先使用 `tyme4ts`，并通过 `BaziCalculator` 接口隔离具体排盘库。
 - 相术（V2）使用 Vision-capable LLM，不引入额外 CV 模型。
 - RAG、用户档案、会话状态和配置均本地优先。
@@ -293,8 +292,8 @@ npm 包不得包含：
 | 主语言 | TypeScript | 统一 CLI、SDK、HTTP API 和 Agent core。 |
 | Runtime | Node.js | V1 面向本地工具和服务端集成，不承诺浏览器运行。 |
 | 发布 | npm package | 便于 CLI 安装、SDK 复用和开源分发。 |
-| Agent 编排 | LangGraph.js | 用于有状态 Agent 流程和会话 checkpoint。 |
-| LLM 抽象 | LangChain.js | 统一 Provider 调用、structured output、streaming 和工具链。 |
+| Agent 编排 | 自研 `XuanAgent` 线性流程 | V1 不引入 LangGraph.js（ADR-0011）。 |
+| LLM 抽象 | 自研 `LlmProvider` + `ProviderFactory` | 统一 Provider 调用，V1 不引入 LangChain.js（ADR-0011）。 |
 | 八字排盘 | `tyme4ts` | 通过 `BaziCalculator` 适配，不让业务层直接依赖第三方对象。 |
 | RAG | 本地知识库 + 可替换向量存储 | V1 小规模起步，技术设计阶段再定具体向量库。 |
 | 用户档案 | 本地 JSON | 后续可升级 SQLite、PostgreSQL 或其他 DB。 |

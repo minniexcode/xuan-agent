@@ -30,7 +30,7 @@ V1 以 TypeScript（Node.js）为主栈，交付单个 npm 包 `xuan-agent`，�
 
 ## ADR-0005：LangGraph.js 编排 + LangChain.js 抽象
 
-- 状态：已采纳（2026-10-15）
+- 状态：已取代（2026-10-15，见 ADR-0011）
 
 Agent 编排用 LangGraph.js 表达有状态流程（八字、追问、对比）并用 checkpointer 保存会话；LLM 抽象用 LangChain.js 统一 Provider 调用与 streaming，经 `ProviderFactory` 隔离。原因是自研有状态编排与多 Provider 抽象成本高，而追问与同盘复用需要可靠的状态管理。
 
@@ -65,3 +65,9 @@ V1 只做八字，相术（面相/手相）整体移入 V2。原因是玄枢的�
 23:00–23:59 出生的日柱，V1 默认按**次日**计算。此选择反直觉：古典**历法**传统（《革象新书》《蠡海集》《清史稿》）主张"子正换日"即 00:00 换日；但**术数排盘的通行实践**是 23:00 换日，且经核实，问真、元亨利贞、易运盘、问道八字、卜易居**全部默认次日**（问真系由其线上接口验证），`tyme4ts` 默认亦为次日。
 
 选"次日"是为对齐生态、零偏离所选库。但流派确有分歧，故做成可切换（`LunarHour.provider`），并要求凡出生时间落在 23:00–23:59 时在 `limitations` 中标注所用流派——**不允许静默选边**。
+
+## ADR-0011：V1 不引入 LangChain.js / LangGraph.js，用轻量自研 Provider 抽象
+
+- 状态：已采纳（2026-10-15）
+
+**取代 ADR-0005。** V1 的 LLM 调用走自研 `LlmProvider` 接口 + `ProviderFactory`（openai-compatible adapter 直接 `fetch`），会话状态走自研 `ConversationStore`（本地 JSON + 原子写入），不引入 LangChain.js / LangGraph.js。原因是 V1 流程是线性的（校验 → 排盘 → Prompt → LLM → 审计 → 存会话），用不上 LangGraph 的图编排与 checkpoint；自研 Provider 抽象只有约百行，已覆盖 V1 需要的 text/streaming/structured output 能力，少一个重依赖、行为更可预期。LangChain/LangGraph 留待流程真正复杂（多步工具链、并行多 Provider、细粒度 checkpoint）时再评估引入。

@@ -10,12 +10,15 @@ function makeAgent() {
 
 describe("XuanAgent.analyzeBazi（mock Provider）", () => {
   it("返回完整 AnalysisResult", async () => {
-    const result = await makeAgent().analyzeBazi({
-      date: "1995-03-12",
-      time: "08:30",
-      gender: "male",
-      calendar: "solar",
-    });
+    const result = await makeAgent().analyzeBazi(
+      {
+        date: "1995-03-12",
+        time: "08:30",
+        gender: "male",
+        calendar: "solar",
+      },
+      { temporary: true },
+    );
 
     expect(result.skill).toBe("bazi");
     expect(result.structured.pillars.year.ganZhi).toBe("乙亥");
@@ -27,12 +30,15 @@ describe("XuanAgent.analyzeBazi（mock Provider）", () => {
 
   it("非法输入抛 VALIDATION_ERROR", async () => {
     await expect(
-      makeAgent().analyzeBazi({
-        date: "03/04/1995",
-        time: "08:30",
-        gender: "male",
-        calendar: "solar",
-      }),
+      makeAgent().analyzeBazi(
+        {
+          date: "03/04/1995",
+          time: "08:30",
+          gender: "male",
+          calendar: "solar",
+        },
+        { temporary: true },
+      ),
     ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
   });
 });

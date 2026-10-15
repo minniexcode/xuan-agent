@@ -2,6 +2,8 @@ import { Command } from "commander";
 import { VERSION } from "../version.js";
 import { registerBaziCommand } from "./commands/bazi.js";
 import { registerConfigCommand } from "./commands/config.js";
+import { registerRagCommand } from "./commands/rag.js";
+import { registerSessionCommand } from "./commands/session.js";
 
 /** 构建 CLI 程序。不产生副作用，便于测试直接断言。 */
 export function buildProgram(): Command {
@@ -14,6 +16,8 @@ export function buildProgram(): Command {
 
   registerBaziCommand(program);
   registerConfigCommand(program);
+  registerRagCommand(program);
+  registerSessionCommand(program);
 
   return program;
 }

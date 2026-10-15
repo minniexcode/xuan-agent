@@ -29,6 +29,13 @@ export interface AnalysisRequest {
   temporary?: boolean;
 }
 
+/** 同盘追问输入（FR-BAZI-05）。sessionId 缺省时续最近一次会话。 */
+export interface FollowupInput {
+  sessionId?: string;
+  question: string;
+  mode?: OutputMode;
+}
+
 export interface AnalysisResult<TStructured = unknown> {
   id: string;
   sessionId: string;
