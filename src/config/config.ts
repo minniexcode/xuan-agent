@@ -10,6 +10,7 @@ export interface XuanConfig {
   apiKey?: string;
   baseUrl: string;
   temperature: number;
+  maxTokens: number;
   enableVision: boolean;
   enableStreaming: boolean;
   logLevel: LogLevel;
@@ -62,6 +63,7 @@ export function resolveConfig(env: NodeJS.ProcessEnv = process.env): XuanConfig 
     model: env.XUAN_MODEL?.trim() || DEFAULTS.model,
     baseUrl: env.XUAN_BASE_URL?.trim() || DEFAULTS.baseUrl,
     temperature: parseNumber(env.XUAN_TEMPERATURE, DEFAULTS.temperature),
+    maxTokens: parseNumber(env.XUAN_MAX_TOKENS, DEFAULTS.maxTokens),
     enableVision: parseBoolean(env.XUAN_ENABLE_VISION, DEFAULTS.enableVision),
     enableStreaming: parseBoolean(env.XUAN_ENABLE_STREAMING, DEFAULTS.enableStreaming),
     logLevel: isLogLevel(rawLogLevel) ? rawLogLevel : DEFAULTS.logLevel,
