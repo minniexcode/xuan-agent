@@ -56,7 +56,7 @@ V1 明确不做：相术图像分析、多 Provider 对比、HTTP API 交付（�
 
 Python **不是** V1 默认依赖，仅在 `lunar-typescript` 未通过样例集验证时作为 `BaziCalculator` 的后备 adapter 方向。
 
-CLI 框架、HTTP 框架、构建工具、schema 库、测试框架与向量存储等框架级选择，留待尚未撰写的技术设计文档。
+CLI 框架、HTTP 框架、构建工具、schema 库、测试框架与向量存储等框架级选择，留待[技术设计文档](docs/technical-design.md)确定。
 
 ## 架构分层
 
@@ -112,7 +112,7 @@ const result = await agent.analyzeBazi({
 });
 ```
 
-参数名与 schema 以技术设计文档为准。
+参数名与 schema 以[技术设计文档](docs/technical-design.md)为准。
 
 开发脚本（契约，待实现）：
 
@@ -135,10 +135,11 @@ npm run pack:dry       # npm pack --dry-run
 ## 文档
 
 - [`docs/prd.md`](docs/prd.md) —— 产品需求文档（PRD）
-- [`docs/product-architecture.md`](docs/product-architecture.md) —— 产品架构与详细设计
-- 技术设计文档 —— 尚未撰写
+- [`docs/product-architecture.md`](docs/product-architecture.md) —— 产品架构
+- [`docs/technical-design.md`](docs/technical-design.md) —— 技术设计（工程蓝图、契约、类型、流程、测试、里程碑）
+- [`docs/adr/`](docs/adr/README.md) —— 架构决策记录（ADR）
 
-文档顺序为 PRD → 产品架构 → 技术设计。两份文档是唯一事实来源。
+文档顺序为 PRD → 产品架构 → 技术设计。三份文档与 ADR 共同构成唯一事实来源。
 
 ## 贡献
 

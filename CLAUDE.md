@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Xuan-agent (玄枢, "Five Arts AI Agent") is an AI agent for traditional Chinese metaphysics / five-arts (五术) exploration. V1 covers two capabilities: **BaZi (八字)** chart generation + structured interpretation, and **physiognomy (相术)** — observational, culturally-grounded analysis of face/palm images.
+Xuan-agent (玄枢, "Five Arts AI Agent") is an AI agent for traditional Chinese metaphysics / five-arts (五术) exploration. V1 covers one capability: **BaZi (八字)** chart generation + structured interpretation. **Physiognomy (相术)** — observational, culturally-grounded analysis of face/palm images — is a V2 extension, out of V1 scope.
 
-The repository is currently **pre-implementation**: `src/` is empty, and all product + architecture decisions live in `docs/prd.md` and `docs/product-architecture.md` (both in Chinese). Those two documents are the single source of truth; treat them as authoritative over any code that appears later.
+The repository is currently **pre-implementation**: `src/` is empty, and all product + architecture decisions live in `docs/` (in Chinese): `prd.md` (product requirements), `product-architecture.md` (architecture), `technical-design.md` (detailed engineering design, contracts, types, workflows, tests, milestones), and `adr/` (architecture decision records). Together these are the single source of truth; treat them as authoritative over any code that appears later.
 
 ## Core principle: separate calculation from interpretation
 
@@ -14,30 +14,30 @@ This is the non-negotiable rule behind the whole design:
 
 - Deterministic chart calculation is done by a library (`lunar-typescript`), never by the LLM. The LLM does **not** perform arithmetic or derive 干支/十神 on its own; it only explains, relates, and phrases results built from structured output.
 - RAG provides citation-backed evidence from classical texts / terminology to keep output traceable rather than free-form.
-- Physiognomy in V1 uses a vision-capable LLM directly; no separate CV model is introduced.
+- Physiognomy (V2) uses a vision-capable LLM directly; no separate CV model is introduced.
 
 ## Decided tech stack (not yet implemented)
 
 - **TypeScript-first**, targeting Node.js (`"type": "module"`, `engines.node >= 20`). No browser runtime in V1.
 - A single npm package named `xuan-agent`: CLI command `xuan` + SDK entry `xuan-agent`, sharing one core. **No** monorepo.
-- Agent orchestration via **LangGraph.js**; LLM abstraction via **LangChain.js**, with a `ProviderFactory` isolating multiple providers (OpenAI / Anthropic / DeepSeek / generic OpenAI-compatible).
+- Agent orchestration via **LangGraph.js**; LLM abstraction via **LangChain.js**, with a `ProviderFactory` isolating providers. V1 defaults to a single provider — DeepSeek through the generic OpenAI-compatible adapter (the Anthropic adapter is kept as a skeleton); multi-provider comparison is deferred until after V1.
 - BaZi calculation via **`lunar-typescript`**, isolated behind the `BaziCalculator` interface.
 - RAG, user profiles (local JSON), session state, and config (`.env`) are all **local-first**.
 - **Python is not a V1 default dependency.** It is only considered as a fallback adapter behind `BaziCalculator` if `lunar-typescript` fails sample-set validation.
 
-Framework-level choices are **deferred to a not-yet-written technical design doc** (see §5.2 of `product-architecture.md`): CLI framework, HTTP framework, build tool, schema library (Zod/Valibot/TypeBox), test framework, and vector store are all undecided.
+Framework-level choices are **deferred to `docs/technical-design.md`** (see §5.2 of `product-architecture.md`): CLI framework, HTTP framework, build tool, schema library (Zod/Valibot/TypeBox), test framework, and vector store are all undecided.
 
 ## Layered architecture
 
 ```
 Entry (CLI / SDK / HTTP API adapters)
   → Orchestration (XuanAgent / LangGraphWorkflow / ConversationStateManager)
-    → Skill layer (bazi / xiangshu-face / xiangshu-palm / rag-reference / profile-memory / provider-compare)
+    → Skill layer (bazi / rag-reference / profile-memory / provider-compare; xiangshu-face / xiangshu-palm are V2)
       → Foundation (BaziCalculator / ProviderFactory / RagEngine / MemoryStore / ProfileStore
                    / PromptManager / SafetyGuard / ConfigManager / Logger)
 ```
 
-Planned directory layout (detailed to file level in §14 of `product-architecture.md`):
+Planned directory layout (detailed to file level in §14 of `docs/technical-design.md`):
 
 - `src/index.ts` — SDK entry point (the only default public API surface)
 - `src/cli/`, `src/api/` — entry layer; must **not** call the chart library, LangChain, RAG, or storage directly — only through SDK / agent core
@@ -56,7 +56,7 @@ Planned directory layout (detailed to file level in §14 of `product-architectur
 
 ## Common commands
 
-There is no `package.json` yet. These scripts are the contract from §15.2 of `product-architecture.md` and must be implemented:
+There is no `package.json` yet. These scripts are the contract from §15.2 of `docs/technical-design.md` and must be implemented:
 
 ```bash
 npm run typecheck      # tsc --noEmit
@@ -67,9 +67,10 @@ npm run build
 npm run pack:dry       # npm pack --dry-run to inspect package contents
 ```
 
-All must pass before publishing. Target CLI command family: `xuan bazi analyze|ask`, `xuan xiangshu analyze`, `xuan rag search`, `xuan provider list|compare`, `xuan profile view|save|delete`, `xuan config doctor`.
+All must pass before publishing. Target CLI command family: `xuan bazi analyze|ask`, `xuan rag search`, `xuan provider list`, `xuan profile view|save|delete`, `xuan config doctor`. (`xuan xiangshu analyze` and `xuan provider compare` are V2 / post-V1.)
 
 ## Other repo contents
 
 - `skills-lock.json` — Claude Code skills lock file (from `mattpocock/skills`). `.agents/` and `.claude/` are gitignored; skills can be reinstalled from this lock file and must not be committed.
-- Document order: `docs/prd.md` → `docs/product-architecture.md` → (not yet written) technical design doc.
+- `README.md` is the user-facing overview; `LICENSE` is MIT.
+- Document order: `docs/prd.md` → `docs/product-architecture.md` → `docs/technical-design.md`; decision rationale lives in `docs/adr/`.
