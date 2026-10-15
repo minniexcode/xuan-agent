@@ -1,15 +1,14 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ChildLimit, Gender, LunarHour, SolarTime } from "tyme4ts";
 import { describe, expect, it } from "vitest";
+import { Tyme4tsBaziCalculator } from "../../src/calculators/index.js";
+import { type BirthInput, BirthInputSchema } from "../../src/schemas/index.js";
 
 /**
  * 回归基线：防回归，不用于证明正确性。
  * 正确性已由三实现交叉对拍 + 权威节气时刻核对确认（见 docs/product-architecture.md §11）。
- *
- * 注意：M2 引入 `BaziCalculator` 后，本测试应改为经该接口断言，
- * 不再直接依赖 tyme4ts 原始对象。
+ * 现在经 `BaziCalculator` 断言，不再直接依赖 tyme4ts 原始对象。
  */
 
 interface BaselineExpect {
@@ -44,46 +43,29 @@ interface Baseline {
 const here = dirname(fileURLToPath(import.meta.url));
 const baseline = JSON.parse(readFileSync(join(here, "bazi-baseline.json"), "utf8")) as Baseline;
 
-function compute(testCase: BaselineCase): BaselineExpect {
-  const [hours, minutes] = testCase.input.time.split(":").map(Number) as [number, number];
-
-  let solarTime: SolarTime;
-  if (testCase.input.calendar === "solar") {
-    const [y, m, d] = (testCase.input.date ?? "").split("-").map(Number) as [
-      number,
-      number,
-      number,
-    ];
-    solarTime = SolarTime.fromYmdHms(y, m, d, hours, minutes, 0);
-  } else {
+function toBirthInput(testCase: BaselineCase): BirthInput {
+  if (testCase.input.calendar === "lunar") {
     const [y, m, d] = testCase.input.lunar as [number, number, number];
-    solarTime = LunarHour.fromYmdHms(y, m, d, hours, minutes, 0).getSolarTime();
+    const date = `${y}-${String(Math.abs(m)).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    return BirthInputSchema.parse({
+      date,
+      calendar: "lunar",
+      lunarLeapMonth: m < 0,
+      gender: testCase.input.gender,
+      time: testCase.input.time,
+    });
   }
-
-  const eightChar = solarTime.getLunarHour().getEightChar();
-  const gender = testCase.input.gender === "male" ? Gender.MAN : Gender.WOMAN;
-  const childLimit = ChildLimit.fromSolarTime(solarTime, gender);
-
-  const daYun: string[] = [];
-  let fortune = childLimit.getStartDecadeFortune();
-  for (let i = 0; i < 3 && fortune; i += 1) {
-    daYun.push(`${fortune.getSixtyCycle().toString()}(${fortune.getStartAge()})`);
-    fortune = fortune.next(1);
-  }
-
-  return {
-    solar: solarTime.getSolarDay().toString(),
-    year: eightChar.getYear().toString(),
-    month: eightChar.getMonth().toString(),
-    day: eightChar.getDay().toString(),
-    hour: eightChar.getHour().toString(),
-    dayMaster: eightChar.getDay().getHeavenStem().toString(),
-    forward: childLimit.isForward(),
-    daYun,
-  };
+  return BirthInputSchema.parse({
+    date: testCase.input.date,
+    calendar: "solar",
+    gender: testCase.input.gender,
+    time: testCase.input.time,
+  });
 }
 
-describe("八字排盘回归基线", () => {
+const calculator = new Tyme4tsBaziCalculator();
+
+describe("八字排盘回归基线（经 BaziCalculator）", () => {
   it("基线文件结构完整", () => {
     expect(baseline.cases).toHaveLength(21);
     for (const testCase of baseline.cases) {
@@ -99,15 +81,27 @@ describe("八字排盘回归基线", () => {
     }
   });
 
-  it("全部用例与 tyme4ts 当前输出一致（防回归）", () => {
-    const mismatches = baseline.cases
-      .map((testCase) => ({
-        id: testCase.id,
-        actual: compute(testCase),
-        expected: testCase.expect,
-      }))
-      .filter(({ actual, expected }) => JSON.stringify(actual) !== JSON.stringify(expected));
-
-    expect(mismatches).toEqual([]);
+  it("全部用例与基线一致（防回归）", () => {
+    for (const testCase of baseline.cases) {
+      const chart = calculator.calculate(toBirthInput(testCase));
+      const actual = {
+        year: chart.pillars.year.ganZhi,
+        month: chart.pillars.month.ganZhi,
+        day: chart.pillars.day.ganZhi,
+        hour: chart.pillars.hour?.ganZhi,
+        dayMaster: chart.dayMaster,
+        forward: chart.luckForward,
+        daYun: chart.luckPillars.slice(0, 3).map((luck) => `${luck.ganZhi}(${luck.startAge})`),
+      };
+      expect(actual, `用例 ${testCase.id}（${testCase.covers}）`).toEqual({
+        year: testCase.expect.year,
+        month: testCase.expect.month,
+        day: testCase.expect.day,
+        hour: testCase.expect.hour,
+        dayMaster: testCase.expect.dayMaster,
+        forward: testCase.expect.forward,
+        daYun: testCase.expect.daYun,
+      });
+    }
   });
 });

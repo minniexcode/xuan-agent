@@ -1,19 +1,28 @@
+import type { BaziCalculator } from "../calculators/bazi-calculator.js";
+import { Tyme4tsBaziCalculator } from "../calculators/index.js";
 import {
   type ConfigSummary,
   getConfigSummary,
   resolveConfig,
   type XuanConfig,
 } from "../config/index.js";
+import { XuanError } from "../errors/index.js";
 import { createLogger, type Logger } from "../logging/index.js";
+import type { BaziChart } from "../schemas/bazi.js";
+import { type BirthInputRequest, BirthInputSchema } from "../schemas/index.js";
 
 export interface XuanAgentOptions {
   /** 覆盖 .env 解析出的配置（优先级最高）。 */
   config?: Partial<XuanConfig>;
   logger?: Logger;
+  /** 注入排盘实现，默认 Tyme4tsBaziCalculator。 */
+  calculator?: BaziCalculator;
 }
 
 export interface XuanAgent {
   getConfigSummary(): Promise<ConfigSummary>;
+  /** 排盘。输入不合法时抛 VALIDATION_ERROR（程序路径不追问，见 FR-BAZI-01）。 */
+  analyzeBazi(input: BirthInputRequest): Promise<BaziChart>;
 }
 
 function mergeConfig(base: XuanConfig, overrides?: Partial<XuanConfig>): XuanConfig {
@@ -27,13 +36,10 @@ function mergeConfig(base: XuanConfig, overrides?: Partial<XuanConfig>): XuanCon
   return merged;
 }
 
-/**
- * SDK 入口。V1 Milestone 1 只暴露配置能力；
- * analyzeBazi / askFollowup 等随后续里程碑加入（见 technical-design.md §18）。
- */
 export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
   const config = mergeConfig(resolveConfig(), options.config);
   const logger = options.logger ?? createLogger(config.logLevel);
+  const calculator = options.calculator ?? new Tyme4tsBaziCalculator();
 
   logger.debug("XuanAgent 已创建", {
     provider: config.provider,
@@ -43,6 +49,19 @@ export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
   return {
     async getConfigSummary(): Promise<ConfigSummary> {
       return getConfigSummary(config);
+    },
+    async analyzeBazi(input: BirthInputRequest): Promise<BaziChart> {
+      const parsed = BirthInputSchema.safeParse(input);
+      if (!parsed.success) {
+        throw new XuanError({
+          code: "VALIDATION_ERROR",
+          message: parsed.error.issues.map((issue) => issue.message).join("；"),
+          stage: "input",
+          recoverable: true,
+          details: { issues: parsed.error.issues },
+        });
+      }
+      return calculator.calculate(parsed.data);
     },
   };
 }

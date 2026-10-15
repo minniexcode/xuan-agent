@@ -42,6 +42,8 @@ export const BirthInputSchema = z
     /** V1 仅作备注，不参与计算。 */
     place: z.string().optional(),
     calendar: CalendarTypeSchema,
+    /** 农历闰月（仅 calendar === "lunar" 时生效，内部转为负月份）。 */
+    lunarLeapMonth: z.boolean().default(false),
     /** V1 恒为 false（真太阳时留待 V2）。 */
     useTrueSolarTime: z.boolean().default(false),
     mode: OutputModeSchema.optional(),
@@ -50,4 +52,7 @@ export const BirthInputSchema = z
     message: "time 与 timeUnknown 必须二选一",
   });
 
+/** 排盘用的已归一化输入（默认值已填充）。 */
 export type BirthInput = z.infer<typeof BirthInputSchema>;
+/** 调用方传入的形式（useTrueSolarTime / lunarLeapMonth 等可省略）。 */
+export type BirthInputRequest = z.input<typeof BirthInputSchema>;

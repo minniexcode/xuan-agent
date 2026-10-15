@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import { VERSION } from "../version.js";
+import { registerBaziCommand } from "./commands/bazi.js";
 import { registerConfigCommand } from "./commands/config.js";
 
 /** 构建 CLI 程序。不产生副作用，便于测试直接断言。 */
@@ -11,6 +12,7 @@ export function buildProgram(): Command {
     .description("玄枢（xuan-agent）——面向五术与自我探索的 AI Agent")
     .version(VERSION, "-v, --version", "显示版本");
 
+  registerBaziCommand(program);
   registerConfigCommand(program);
 
   return program;
