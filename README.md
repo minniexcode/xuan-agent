@@ -35,7 +35,7 @@ V1 聚焦八字命理：
 - 出生信息采集与确定性排盘
 - 通俗模式 / 进阶模式两层结构化解读
 - 围绕排盘结果的连续追问与同盘复用
-- 对话级记忆与用户档案级记忆
+- 会话记忆与用户档案记忆
 - RAG 古籍引用检索
 - 多 Provider 可切换（V1 默认单一 Provider）
 
@@ -63,8 +63,8 @@ CLI 框架、HTTP 框架、构建工具、schema 库、测试框架与向量存�
 ```text
 Entry（CLI / SDK / HTTP API adapters）
   → Orchestration（XuanAgent / LangGraphWorkflow / ConversationStateManager）
-    → Skill（bazi / rag-reference / profile-memory / provider-compare）
-      → Foundation（BaziCalculator / ProviderFactory / RagEngine / MemoryStore
+    → Skill（bazi / rag-reference / profile / provider-compare）
+      → Foundation（BaziCalculator / ProviderFactory / RagEngine / ConversationStore
                     / ProfileStore / PromptManager / SafetyGuard / ConfigManager / Logger）
 ```
 
@@ -134,12 +134,13 @@ npm run pack:dry       # npm pack --dry-run
 
 ## 文档
 
-- [`docs/prd.md`](docs/prd.md) —— 产品需求文档（PRD）
+- [`docs/prd.md`](docs/prd.md) —— 产品需求文档（PRD，简略：FR 索引）
+- [`docs/requirements.md`](docs/requirements.md) —— 详细功能需求规格
 - [`docs/product-architecture.md`](docs/product-architecture.md) —— 产品架构
 - [`docs/technical-design.md`](docs/technical-design.md) —— 技术设计（工程蓝图、契约、类型、流程、测试、里程碑）
-- [`docs/adr/`](docs/adr/README.md) —— 架构决策记录（ADR）
+- [`docs/adr.md`](docs/adr.md) —— 架构决策记录（ADR）
 
-文档顺序为 PRD → 产品架构 → 技术设计。三份文档与 ADR 共同构成唯一事实来源。
+文档顺序为 PRD → 详细需求规格 → 产品架构 → 技术设计；决策理由见 ADR。这些文档共同构成唯一事实来源。
 
 ## 贡献
 

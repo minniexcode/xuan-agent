@@ -37,7 +37,7 @@ xuan-agent/
     providers/
     calculators/
     rag/
-    memory/
+    conversations/
     profiles/
     prompts/
     safety/
@@ -68,7 +68,7 @@ V1 不使用 monorepo。只有当后续出现独立前端、独立插件市场�
 | `src/providers/` | ProviderFactory 和 LangChain.js adapters。 | 部分 |
 | `src/calculators/` | `BaziCalculator` 与 `lunar-typescript` adapter。 | 部分 |
 | `src/rag/` | 知识库加载、chunk、embedding、检索、引用格式化。 | 部分 |
-| `src/memory/` | 会话级状态、checkpoint store。 | 否 |
+| `src/conversations/` | 会话状态、checkpoint store。 | 否 |
 | `src/profiles/` | 本地用户档案 CRUD。 | 部分 |
 | `src/prompts/` | Prompt 模板、版本、渲染。 | 否 |
 | `src/safety/` | 安全策略、输入检查、输出检查。 | 否 |
@@ -122,8 +122,8 @@ src/
       bazi.prompts.ts
     rag-reference/
       rag-reference.skill.ts
-    profile-memory/
-      profile-memory.skill.ts
+    profile/
+      profile.skill.ts
     provider-compare/
       provider-compare.skill.ts
   providers/
@@ -143,10 +143,10 @@ src/
     embedding-provider.ts
     vector-store.ts
     citation-formatter.ts
-  memory/
+  conversations/
     conversation-state.ts
     checkpointer.ts
-    memory-store.ts
+    conversation-store.ts
   profiles/
     profile-store.ts
     profile-service.ts
@@ -344,13 +344,11 @@ V1 应使用 TypeScript 类型 + 运行时 schema 双层约束。运行时 schem
 export type OutputMode = "beginner" | "advanced" | "both";
 export type CalendarType = "solar" | "lunar";
 export type Gender = "male" | "female" | "unspecified";
-export type XiangshuType = "face" | "palm";
-export type ProviderName =
-  | "anthropic"
-  | "openai"
-  | "deepseek"
-  | "openai-compatible";
+export type XiangshuType = "face" | "palm"; // V2 前瞻
+export type ProviderName = "anthropic" | "openai-compatible" | "mock";
 ```
+
+`ProviderName` 只标识**服务方**；具体模型由 `model` 字段表达（例如 DeepSeek 走 `openai-compatible`，`model` 为 `deepseek-chat`）。`mock` 供测试使用。
 
 ### 17.2 `BirthInput`
 
@@ -399,7 +397,7 @@ export interface BaziChart {
   solarTerms?: SolarTermInfo;
   luckPillars?: LuckPillar[];
   annualFortune?: AnnualFortune[];
-  symbolicStars?: SymbolicStar[];
+  symbolicStars?: SymbolicStar[]; // V2（lunar-typescript 不支持，需自研）
   limitations: string[];
 }
 ```
@@ -443,7 +441,7 @@ export interface AnalysisResult<TStructured = unknown> {
     summary: string;
     sections: AnalysisSection[];
     followupQuestions: string[];
-    disclaimer: string;
+    boundaryNotice: string;
   };
   citations: RagCitation[];
   safety: {
@@ -496,7 +494,7 @@ export function createXuanAgent(options?: XuanAgentOptions): XuanAgent;
 - `config`
 - `providerFactory`
 - `skillRegistry`
-- `memoryStore`
+- `conversationStore`
 - `profileStore`
 - `ragEngine`
 - `logger`
@@ -537,6 +535,7 @@ export interface XuanAgent {
 | `xuan profile view` | 无 | `--user`、`--json` | 用户档案 |
 | `xuan profile save` | 视保存内容而定 | `--user`、`--confirm` | 保存结果 |
 | `xuan profile delete` | 无 | `--user`、`--confirm` | 删除结果 |
+| `xuan session clear` | 无 | `--session`、`--all` | 清理结果 |
 | `xuan config doctor` | 无 | `--json` | 配置健康检查 |
 
 `xuan xiangshu analyze`（相术）与 `xuan provider compare`（多 Provider 对比）为 V2 / V1 完成后能力，V1 不交付。
@@ -603,7 +602,7 @@ export interface WorkflowState {
   model?: string;
   input: unknown;
   chart?: BaziChart;
-  imageObservation?: XiangshuObservation;
+  imageObservation?: XiangshuObservation; // V2
   citations: RagCitation[];
   prompt?: RenderedPrompt;
   llmOutput?: unknown;
@@ -704,7 +703,7 @@ export interface LlmProvider {
   model: string;
   capabilities: ProviderCapabilities;
   invokeText(input: TextLlmInput): Promise<LlmTextOutput>;
-  invokeVision(input: VisionLlmInput): Promise<LlmVisionOutput>;
+  invokeVision(input: VisionLlmInput): Promise<LlmVisionOutput>; // V2
   streamText?(input: TextLlmInput): AsyncIterable<LlmTextChunk>;
 }
 ```
@@ -754,7 +753,7 @@ export interface SkillManifest<I = unknown, O = unknown> {
 | --- | --- | --- |
 | `bazi` | 校验出生信息、调用 `BaziCalculator`、组织八字解读。 | 直接让 LLM 排盘。 |
 | `rag-reference` | 检索资料、格式化引用。 | 伪造来源或把古籍当最终裁决。 |
-| `profile-memory` | 管理显式授权的档案。 | 默认保存敏感信息。 |
+| `profile` | 管理显式授权的档案。 | 默认保存敏感信息。 |
 | `provider-compare` | （V1 后）复用同一输入并列输出不同模型结果。 | 修改排盘或 RAG 证据。 |
 
 ## 24. RAG 文件格式与索引设计
@@ -790,7 +789,7 @@ export interface KnowledgeChunk {
   id: string;
   documentId: string;
   title: string;
-  domain: "bazi" | "face" | "palm" | "general";
+  domain: "bazi" | "face" | "palm" | "general"; // face/palm 为 V2
   tags: string[];
   sourceName: string;
   sourceType: string;
@@ -1018,8 +1017,8 @@ V1 不包含相术。图像输入校验、Vision capability、`xiangshu-face`、
 | FR-BAZI-02 确定性排盘 | `BaziCalculator`、`BaziChart`、排盘样例集。 |
 | FR-BAZI-03 通俗模式解读 | `bazi` Skill、PromptManager、SafetyGuard。 |
 | FR-BAZI-04 进阶模式解读 | `bazi` Skill、RagEngine、RagCitation。 |
-| FR-BAZI-05 追问与同盘复用 | ConversationState、LangGraphWorkflow、MemoryStore。 |
-| FR-MEM-01 对话级记忆 | LangGraph checkpointer、ConversationState、MemoryStore。 |
+| FR-BAZI-05 追问与同盘复用 | ConversationState、LangGraphWorkflow、ConversationStore。 |
+| FR-MEM-01 对话级记忆 | LangGraph checkpointer、ConversationState、ConversationStore。 |
 | FR-MEM-02 用户档案级记忆 | UserProfile、ProfileStore、本地 JSON。 |
 | FR-RAG-01 知识库内容管理 | Local knowledge base、RagEngine、source metadata。 |
 | FR-RAG-02 检索与引用 | RagCitation、RagEngine、PromptManager。 |

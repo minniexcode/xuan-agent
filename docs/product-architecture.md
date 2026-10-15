@@ -43,9 +43,9 @@ V1 采用 **TypeScript-first + npm package + CLI/SDK 一体** 的产品架构。
 - 支撑八字命理核心能力（相术为 V2 扩展方向）。
 - 保证确定性计算和 LLM 解读分离。
 - 让 CLI、SDK 和 HTTP API 复用同一套核心能力。
-- 支持多 LLM Provider 切换与对比。
-- 支持 RAG 引用、对话级记忆、用户档案和 Skill 扩展。
-- 默认保护出生信息、出生地、图像、用户档案、API key 和对话历史。
+- 支持 LLM Provider 可切换（多 Provider 对比为 V1 完成后能力）。
+- 支持 RAG 引用、会话状态、用户档案和 Skill 扩展。
+- 默认保护出生信息、出生地、用户档案、API key 和对话历史（相术图像为 V2）。
 - 支持后续新增六爻、紫微、奇门、梅花等 Skill，而不重写核心 Agent 流程。
 
 V1 不追求：
@@ -84,7 +84,7 @@ Skill Layer
   |
   |-- bazi
   |-- rag-reference
-  |-- profile-memory
+  |-- profile
   |-- provider-compare
   |
 Foundation Layer
@@ -92,7 +92,7 @@ Foundation Layer
   |-- BaziCalculator
   |-- ProviderFactory
   |-- RagEngine
-  |-- MemoryStore
+  |-- ConversationStore
   |-- ProfileStore
   |-- PromptManager
   |-- SafetyGuard
@@ -113,7 +113,7 @@ Local Storage / External Providers
 
 入口层负责接收用户或上层系统输入，不承载核心业务逻辑。
 
-- CLI 是 V1 主入口，适合本地个人使用、调试排盘、调试 Prompt、管理档案和对比 Provider。
+- CLI 是 V1 主入口，适合本地个人使用、调试排盘、调试 Prompt 和管理档案。
 - SDK 是所有核心能力的公开调用入口，CLI 和 HTTP API 都应调用 SDK。
 - HTTP API 面向后续前端、桌面端、自动化工作流或第三方服务集成。
 
@@ -128,7 +128,7 @@ CLI 和 HTTP API 不直接调用排盘库、LangChain、RAG 或本地存储；�
 - 加载会话状态和用户档案偏好。
 - 调用确定性工具、RAG、Provider 和 Safety。
 - 组织阶段式输出或 streaming 输出。
-- 写入会话级记忆。
+- 写入会话状态。
 - 在用户显式确认后写入长期档案。
 
 LangGraph.js 用于表达有状态流程，尤其是八字追问、同盘复用、多 Provider 对比和会话 checkpoint。
@@ -139,12 +139,12 @@ Skill 是可注册、可替换、可复用的业务能力单元。
 
 V1 必须包含：
 
-| Skill | 说明 |
-| --- | --- |
-| `bazi` | 八字排盘与解读。 |
-| `rag-reference` | 古籍、术语和知识库检索引用。 |
-| `profile-memory` | 用户档案和偏好管理。 |
-| `provider-compare` | 多 Provider 对比（V1 完成后验证）。 |
+| Skill | 档位 | 说明 |
+| --- | --- | --- |
+| `bazi` | V1 交付 | 八字排盘与解读。 |
+| `profile` | V1 交付 | 用户档案和偏好管理。 |
+| `rag-reference` | 骨架 | 古籍、术语和知识库检索引用（内容待数据）。 |
+| `provider-compare` | 骨架 | 多 Provider 对比（V1 后）。 |
 
 每个 Skill 必须声明：
 
@@ -165,7 +165,7 @@ V1 必须包含：
 - `BaziCalculator`：隔离八字排盘库。
 - `ProviderFactory`：统一创建 LLM Provider。
 - `RagEngine`：检索知识库并返回引用。
-- `MemoryStore`：保存会话级状态。
+- `ConversationStore`：保存会话状态。
 - `ProfileStore`：管理本地用户档案。
 - `PromptManager`：管理版本化 Prompt。
 - `SafetyGuard`：执行输入、Prompt 和输出安全边界。
@@ -207,6 +207,7 @@ xuan provider list
 xuan profile view
 xuan profile save
 xuan profile delete
+xuan session clear
 xuan config doctor
 ```
 
@@ -393,9 +394,9 @@ V1 默认实现：
 - 替换排盘库不得影响 LLM 解读、RAG、Provider、CLI、SDK 和 HTTP API。
 - 如果计算能力不足，只能修改 calculator 或 adapter，不得让 LLM 补算。
 
-### 6.4 `ImageAnalysisInput`
+### 6.4 `ImageAnalysisInput`（V2 前瞻）
 
-用于相术分析入口。
+用于相术分析入口。V1 不交付，此处保留为 V2 前瞻类型。
 
 至少包含：
 
@@ -456,7 +457,7 @@ V1 默认实现：
 
 ### 6.7 `ConversationState`
 
-用于对话级记忆。
+用于会话状态。
 
 至少包含：
 
@@ -553,7 +554,7 @@ CLI / SDK / HTTP API
   -> PromptManager + SafetyGuard
   -> ProviderFactory + LLM
   -> AnalysisResult
-  -> MemoryStore
+  -> ConversationStore
   -> optional ProfileStore
 ```
 
@@ -608,7 +609,7 @@ CLI / SDK / HTTP API
   -> PromptManager + SafetyGuard
   -> Vision Provider
   -> AnalysisResult
-  -> MemoryStore
+  -> ConversationStore
 ```
 
 流程规则（V2）：
@@ -685,7 +686,7 @@ Profile command / SDK call
 
 ## 8. 安全与隐私架构
 
-安全和隐私必须进入系统逻辑，而不只是文档免责声明。
+安全和隐私必须进入系统逻辑，而不只是文档里的边界提醒。
 
 ### 8.1 SafetyGuard
 
@@ -782,7 +783,7 @@ V1 至少记录以下脱敏调试信息：
 - 排盘库来源和版本。
 - RAG 命中文档。
 - 是否使用用户档案。
-- 是否保存对话级记忆。
+- 是否保存会话状态。
 - 请求阶段状态：校验、排盘、RAG、LLM、输出后处理。
 - 错误类型和错误阶段。
 
@@ -809,6 +810,8 @@ TypeScript-first 的主要风险在八字计算细节。V1 必须建立排盘样
 - 不同性别的大运顺逆。
 - 农历换算。
 - 真太阳时关闭状态。
+
+样例期望值以**问真**（`pcbz.iwzwh.com`）排盘为金标准，需人工转录（问真无公开 API）。需特别覆盖两类已知风险：**节气边界**（`lunar-typescript` 的 `getNextJieQi` / `getPrevJie` 有 bug，可影响月柱）与**晚子时**（23:00–23:59，日柱流派分歧，见 `EightChar.sect`）。
 
 每个样例至少断言：
 

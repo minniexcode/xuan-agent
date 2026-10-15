@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Xuan-agent (玄枢, "Five Arts AI Agent") is an AI agent for traditional Chinese metaphysics / five-arts (五术) exploration. V1 covers one capability: **BaZi (八字)** chart generation + structured interpretation. **Physiognomy (相术)** — observational, culturally-grounded analysis of face/palm images — is a V2 extension, out of V1 scope.
 
-The repository is currently **pre-implementation**: `src/` is empty, and all product + architecture decisions live in `docs/` (in Chinese): `prd.md` (product requirements), `product-architecture.md` (architecture), `technical-design.md` (detailed engineering design, contracts, types, workflows, tests, milestones), and `adr/` (architecture decision records). Together these are the single source of truth; treat them as authoritative over any code that appears later.
+The repository is currently **pre-implementation**: `src/` is empty, and all product + architecture decisions live in `docs/` (in Chinese): `prd.md` (product requirements; brief — FR index only), `requirements.md` (detailed functional requirement specs), `product-architecture.md` (architecture), `technical-design.md` (detailed engineering design, contracts, types, workflows, tests, milestones), and `adr.md` (architecture decision records). Together these are the single source of truth; treat them as authoritative over any code that appears later.
 
 ## Core principle: separate calculation from interpretation
 
@@ -32,8 +32,8 @@ Framework-level choices are **deferred to `docs/technical-design.md`** (see §5.
 ```
 Entry (CLI / SDK / HTTP API adapters)
   → Orchestration (XuanAgent / LangGraphWorkflow / ConversationStateManager)
-    → Skill layer (bazi / rag-reference / profile-memory / provider-compare; xiangshu-face / xiangshu-palm are V2)
-      → Foundation (BaziCalculator / ProviderFactory / RagEngine / MemoryStore / ProfileStore
+    → Skill layer (bazi / rag-reference / profile / provider-compare; xiangshu-face / xiangshu-palm are V2)
+      → Foundation (BaziCalculator / ProviderFactory / RagEngine / ConversationStore / ProfileStore
                    / PromptManager / SafetyGuard / ConfigManager / Logger)
 ```
 
@@ -73,4 +73,5 @@ All must pass before publishing. Target CLI command family: `xuan bazi analyze|a
 
 - `skills-lock.json` — Claude Code skills lock file (from `mattpocock/skills`). `.agents/` and `.claude/` are gitignored; skills can be reinstalled from this lock file and must not be committed.
 - `README.md` is the user-facing overview; `LICENSE` is MIT.
-- Document order: `docs/prd.md` → `docs/product-architecture.md` → `docs/technical-design.md`; decision rationale lives in `docs/adr/`.
+- `GLOSSARY.md` is the canonical domain vocabulary (Chinese) — use its terms and avoid its `_Avoid_` words.
+- Document order: `docs/prd.md` → `docs/requirements.md` → `docs/product-architecture.md` → `docs/technical-design.md`; decision rationale lives in `docs/adr.md`.
