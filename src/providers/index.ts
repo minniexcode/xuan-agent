@@ -7,4 +7,6 @@ export type {
   TextLlmInput,
   TextLlmMessage,
 } from "./provider.types.js";
+export type { ProviderInfo, ProviderStatus } from "./provider-catalog.js";
+export { listProviders } from "./provider-catalog.js";
 export { ProviderFactory } from "./provider-factory.js";

@@ -11,6 +11,7 @@ import type { ConversationState } from "../conversations/index.js";
 import { ConversationStore } from "../conversations/index.js";
 import { XuanError } from "../errors/index.js";
 import { createLogger, type Logger } from "../logging/index.js";
+import { ProfileStore } from "../profiles/index.js";
 import { PromptManager } from "../prompts/index.js";
 import { ProviderFactory } from "../providers/index.js";
 import type { LlmProvider } from "../providers/provider.types.js";
@@ -22,9 +23,16 @@ import {
   type AnalysisResult,
   BOUNDARY_NOTICE,
   type FollowupInput,
+  type RagCitation,
 } from "../schemas/analysis.js";
 import type { BaziChart } from "../schemas/bazi.js";
 import { type BirthInputRequest, BirthInputSchema } from "../schemas/index.js";
+import {
+  type ProfileInput,
+  ProfilePreferencesSchema,
+  type SaveProfileOptions,
+  type UserProfile,
+} from "../schemas/profile.js";
 
 export interface XuanAgentOptions {
   /** 覆盖 .env 解析出的配置（优先级最高）。 */
@@ -37,6 +45,8 @@ export interface XuanAgentOptions {
   ragEngine?: RagEngine;
   /** 注入会话存储（用于测试与自定义会话目录）。 */
   conversationStore?: ConversationStore;
+  /** 注入档案存储（用于测试与自定义档案目录）。 */
+  profileStore?: ProfileStore;
 }
 
 export interface XuanAgent {
@@ -47,6 +57,9 @@ export interface XuanAgent {
   ): Promise<AnalysisResult<BaziChart>>;
   askFollowup(input: FollowupInput): Promise<AnalysisResult<BaziChart>>;
   searchRag(options: RagSearchOptions): Promise<RagSearchResult>;
+  getProfile(userId?: string): Promise<UserProfile | null>;
+  saveProfile(input: ProfileInput, options?: SaveProfileOptions): Promise<UserProfile>;
+  deleteProfile(userId?: string, options?: SaveProfileOptions): Promise<void>;
 }
 
 function mergeConfig(base: XuanConfig, overrides?: Partial<XuanConfig>): XuanConfig {
@@ -80,6 +93,19 @@ export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
     conversationStore ??= new ConversationStore(config.paths.sessionsDir);
     return conversationStore;
   };
+  let profileStore = options.profileStore;
+  const getProfileStore = (): ProfileStore => {
+    profileStore ??= new ProfileStore(config.paths.profilesDir);
+    return profileStore;
+  };
+
+  /** 进阶解读的 RAG 引用：用日主 + 十神拼检索词（通俗模式不检索）。 */
+  async function searchChartCitations(chart: BaziChart, topK = 5): Promise<RagCitation[]> {
+    const terms = [chart.dayMaster, ...chart.tenGods.map((relation) => relation.tenGod)];
+    const query = [...new Set(terms)].filter(Boolean).join(" ");
+    const result = await ragEngine.search({ query, topK });
+    return result.citations;
+  }
 
   logger.debug("XuanAgent 已创建", { provider: config.provider, model: config.model });
 
@@ -143,7 +169,9 @@ export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
       const chart = calculator.calculate(parsed.data);
       const mode = request.mode ?? parsed.data.mode ?? "advanced";
       const llm = getProvider();
-      const { input: promptInput, version } = promptManager.buildBaziPrompt(chart, mode);
+      // 进阶模式带 RAG 引用，通俗模式不检索（FR-BAZI-04）。
+      const citations = mode !== "beginner" ? await searchChartCitations(chart) : [];
+      const { input: promptInput, version } = promptManager.buildBaziPrompt(chart, mode, citations);
 
       const started = Date.now();
       const output = await llm.invokeText(promptInput);
@@ -160,7 +188,7 @@ export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
           mode,
           provider: llm.name,
           model: llm.model,
-          ragHits: [],
+          ragHits: citations,
           safetyWarnings: audit.warnings,
           updatedAt: new Date().toISOString(),
         });
@@ -172,12 +200,12 @@ export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
         sessionId,
         mode,
         output.text,
-        [],
+        citations,
         audit.warnings,
         audit.blocked,
         version,
         durationMs,
-        false,
+        citations.length > 0,
       );
     },
 
@@ -245,6 +273,66 @@ export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
 
     async searchRag(options: RagSearchOptions): Promise<RagSearchResult> {
       return ragEngine.search(options);
+    },
+
+    async getProfile(userId = "default"): Promise<UserProfile | null> {
+      const found = await getProfileStore().load(userId);
+      return found ?? null;
+    },
+
+    async saveProfile(input: ProfileInput, options: SaveProfileOptions = {}): Promise<UserProfile> {
+      if (options.confirm !== true) {
+        throw new XuanError({
+          code: "PROFILE_PERMISSION_REQUIRED",
+          message: "保存档案需显式确认（--confirm）",
+          stage: "profile",
+          recoverable: true,
+        });
+      }
+      const birth = BirthInputSchema.safeParse(input.birth);
+      if (!birth.success) {
+        throw new XuanError({
+          code: "VALIDATION_ERROR",
+          message: birth.error.issues.map((issue) => issue.message).join("；"),
+          stage: "input",
+          recoverable: true,
+        });
+      }
+      const preferences = ProfilePreferencesSchema.safeParse(input.preferences);
+      if (!preferences.success) {
+        throw new XuanError({
+          code: "VALIDATION_ERROR",
+          message: preferences.error.issues.map((issue) => issue.message).join("；"),
+          stage: "input",
+          recoverable: true,
+        });
+      }
+
+      const userId = input.userId ?? "default";
+      const store = getProfileStore();
+      const existing = await store.load(userId);
+      const now = new Date().toISOString();
+      const profile: UserProfile = {
+        userId,
+        birth: birth.data,
+        preferences: preferences.data,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+      };
+      await store.save(profile);
+      return profile;
+    },
+
+    async deleteProfile(userId = "default", options: SaveProfileOptions = {}): Promise<void> {
+      if (options.confirm !== true) {
+        throw new XuanError({
+          code: "PROFILE_PERMISSION_REQUIRED",
+          message: "删除档案需显式确认（--confirm）",
+          stage: "profile",
+          recoverable: true,
+        });
+      }
+      await getProfileStore().delete(userId);
     },
   };
 }
