@@ -12,11 +12,13 @@
 
 | 路线 | 读什么 | 耗时 |
 | --- | --- | --- |
-| **速览** | 第 1–3 站（全貌 + 依赖 + 架构与数据流） | ~15 分钟 |
+| **速览** | 第 1–3 站，**尤其 §3.4 的实跑快照** | ~20 分钟 |
 | **完整 review** | 第 1–12 站顺序读 + 文末「Review 检查清单」 | ~1.5 小时 |
-| **只为 Vision 做准备** | 第 3 站（数据流）+ 第 5/6/9 站（计算/Provider/Safety）+ 文末「Vision 接入点」 | ~40 分钟 |
+| **只为 Vision 做准备** | §3.4 + 第 5/6/9 站（计算/Provider/Safety）+ 文末「Vision 接入点」 | ~40 分钟 |
 
 V1 全部源码约 **2600 行 TypeScript**（不含测试），规模不大，值得通读。
+
+**文档能给你什么、不能给你什么**：这份文档是**地图**——它告诉你每块代码在哪、为什么这么写、读的时候注意什么，并把最容易踩的坑和规格差距都挑出来了。但它不能替代读那 2600 行。建议的顺序是：**先读 §3.4 那份实跑快照**（20 分钟，能建立数据直觉）→ 再按第 4–11 站逐层读代码（每站对照文档看，约 1 小时）→ 最后看检查清单做判断。
 
 ---
 
@@ -166,6 +168,140 @@ src/agent/xuan-agent.ts:212  askFollowup()
 ```
 
 对比 A 和 B：A 是"出生信息 → 盘面"，B 是"已有盘面 → 追问"。**盘面是两者共享的不变量**，这就是"同盘复用"的实现方式。
+
+### 3.4 跟着真实数据走一遍（实跑快照）
+
+上面是抽象流程。下面这份是**实跑出来的**（`1995-03-12 08:30 男 公历`，mock Provider），数据怎么一步步变形看得见。建议对照第 4–10 站的代码一起看。
+
+**① 调用方传入**（`BirthInputRequest`，字段都可选）：
+
+```json
+{ "date": "1995-03-12", "time": "08:30", "gender": "male", "calendar": "solar" }
+```
+
+**② zod 解析后**（`BirthInput`，默认值已填充 —— 这就是 `z.input` 与 `z.infer` 的差别）：
+
+```json
+{
+  "date": "1995-03-12", "time": "08:30", "gender": "male", "calendar": "solar",
+  "lunarLeapMonth": false, "useTrueSolarTime": false
+}
+```
+
+**③ 排盘结果**（`BaziChart` —— **全项目最重要的数据结构**，后面每一步都在用它）：
+
+```json
+{
+  "source": { "library": "tyme4ts", "version": "1.5.3", "generatedAt": "…" },
+  "input": { "…": "② 的原样回填" },
+  "pillars": {
+    "year":  { "ganZhi": "乙亥", "heavenlyStem": "乙", "earthlyBranch": "亥", "hiddenStems": ["壬","甲"], "naYin": "山头火" },
+    "month": { "ganZhi": "己卯", "heavenlyStem": "己", "earthlyBranch": "卯", "hiddenStems": ["乙"],      "naYin": "城头土" },
+    "day":   { "ganZhi": "壬寅", "heavenlyStem": "壬", "earthlyBranch": "寅", "hiddenStems": ["甲","丙","戊"], "naYin": "金箔金" },
+    "hour":  { "ganZhi": "甲辰", "heavenlyStem": "甲", "earthlyBranch": "辰", "hiddenStems": ["戊","乙","癸"], "naYin": "覆灯火" },
+    "hourStatus": "known"
+  },
+  "dayMaster": "壬",
+  "fiveElements": { "金": 0, "木": 4, "水": 2, "火": 0, "土": 2 },
+  "tenGods": [
+    { "pillar": "year", "tenGod": "伤官" }, { "pillar": "month", "tenGod": "正官" },
+    { "pillar": "day", "tenGod": "比肩" },  { "pillar": "hour",  "tenGod": "食神" }
+  ],
+  "luckForward": false, "luckStartAge": 1,
+  "luckPillars": [
+    { "index": 0, "ganZhi": "戊寅", "startAge": 3,  "endAge": 12 },
+    { "index": 1, "ganZhi": "丁丑", "startAge": 13, "endAge": 22 },
+    { "index": 2, "ganZhi": "丙子", "startAge": 23, "endAge": 32 },
+    { "index": 3, "ganZhi": "乙亥", "startAge": 33, "endAge": 42 },
+    { "index": 4, "ganZhi": "甲戌", "startAge": 43, "endAge": 52 },
+    { "index": 5, "ganZhi": "癸酉", "startAge": 53, "endAge": 62 },
+    { "index": 6, "ganZhi": "壬申", "startAge": 63, "endAge": 72 },
+    { "index": 7, "ganZhi": "辛未", "startAge": 73, "endAge": 82 }
+  ],
+  "limitations": ["未启用真太阳时"]
+}
+```
+
+注意 `limitations` 里**没有**晚子时那条 —— 因为出生时间是 08:30。若传 `23:30`，这里会多一条晚子时流派的标注。
+
+**④ RAG 检索**（进阶模式才做）：
+
+```text
+查询词（日主 + 十神去重）：  壬 伤官 正官 比肩 食神
+命中：4 条，mode = "keyword"
+```
+
+> ⚠️ **这里能看出检查清单第 3 项的问题**：4 条命中里有 3 条只命中了 `壬` 一个字（正印/壬水/调候三篇都提到"壬水"）。也就是说，**"十神"这个词的区分度实际很低**，真正精准的只有"伤官"那条。知识库一变大，噪声会迅速上升。这是"启发式拼查询词"的直接证据。
+
+**⑤ 发给 LLM 的 Prompt**（`bazi-advanced-v0`）：
+
+```text
+【system】你是玄枢（xuan-agent），一个面向传统五术与自我探索的 AI。
+解读必须中性、克制、非断言：用「倾向」「观察角度」「传统语境下可以理解为」等表达。
+绝不使用「必然」「注定」「一定」「大凶」「必发财」「必离婚」等断言或恐吓性语言。
+不做医疗、法律、投资、婚育、生死等重大决策建议；不把玄学表述为科学预测。
+不给用户贴固定的人格或命运标签。
+
+【user】以下是排盘结果（结构化 JSON）：
+<< ③ 的 BaziChart JSON 全文 >>
+
+面向有基础的爱好者：直接使用专业术语（四柱、十神、五行、大运），展开结构与依据。
+
+以下为知识库检索到的参考（区分原文与释义，仅作解释依据，不作定论）：
+1. 玄枢示例资料（自整理）（命中：伤官、壬）
+   原文：伤官为我生之异性者，如日主壬水，见甲木即为伤官。伤官主才华、表达、突破……
+   释义：伤官重的人往往表达欲强、点子多，不喜被条条框框约束……
+2. …（共 4 条）
+请基于排盘结果给出解读。
+```
+
+**这就是"计算与解读分离"的全部体现**：LLM 收到的是一份**已经算好的结构化盘面**，不是生日字符串。它没有机会自己排盘。
+
+**⑥ 最终结果**（`AnalysisResult`，此处省略 `structured` 和 `summary` 内容）：
+
+```json
+{
+  "id": "27d50060-…", "sessionId": "sess-ada95939-…", "skill": "bazi",
+  "provider": { "name": "mock", "model": "mock" },
+  "mode": "advanced",
+  "structured": "<< ③ 的 BaziChart >>",
+  "content": {
+    "summary": "<< LLM 文本 >>",
+    "sections": [],                        // ← 检查清单第 1 项：恒为空
+    "followupQuestions": [],
+    "boundaryNotice": "本分析用于兴趣型自我探索，不作为现实决策依据。"
+  },
+  "citations": [ /* 4 条，结构同 ④ */ ],
+  "safety": { "boundaryApplied": true, "warnings": [], "blocked": false },
+  "metadata": {
+    "createdAt": "…", "durationMs": 0,
+    "promptVersion": "bazi-advanced-v0",
+    "ragUsed": true
+  }
+}
+```
+
+**⑦ 落盘**（`analyze` 默认存；`temporary: true` 则跳过）：
+
+```text
+<XUAN_DATA_DIR>/sessions/
+  sess-ada95939-….json     ← 完整会话状态（含 chart）
+  latest.json              ← { "sessionId": "sess-ada95939-…" }  ← ask 靠它"续最近会话"
+```
+
+会话文件 = `③ 的 chart` + `mode` + `provider` + `model` + `ragHits`（= ④ 的 4 条）+ `safetyWarnings` + `updatedAt`。
+
+> **注意这里就是隐私取舍的落点**：会话文件里**确实存了出生信息**（在 `chart.input` 里）。这是 FR-MEM-01"必须存，否则追问没法用"与 §8.3"默认不持久化出生信息"的调和结果 —— 存本地、可 `xuan session clear` 清理、SDK 可 `temporary: true` 完全跳过。你 review 时要判断的是：**这个折中可接受吗？**
+
+跑出这份快照的脚本思路（你也可以自己复现）：
+
+```js
+const parsed = BirthInputSchema.parse(raw);
+const chart  = new Tyme4tsBaziCalculator().calculate(parsed);
+const rag    = await new RagEngine().search({ query: "壬 伤官 正官 比肩 食神", topK: 5 });
+const { input, version } = new PromptManager().buildBaziPrompt(chart, "advanced", rag.citations);
+const result = await createXuanAgent({ config: { provider: "mock" } }).analyzeBazi(raw);
+```
 
 ---
 
@@ -487,7 +623,9 @@ npm run test:smoke                   # 只跑冒烟
 const terms = [chart.dayMaster, ...chart.tenGods.map((r) => r.tenGod)];
 ```
 
-实跑效果还行（能命中正印/伤官/壬水/调候）。但它**不是语义检索**，命中与否依赖知识库标签和这些词的重合度。知识库内容一多，这个策略可能要换成向量检索（`RagSearchResult.mode` 字段已经预留了降级标记）。
+**§3.4 第 ④ 步有实跑证据**：4 条命中里 3 条只命中了 `壬` 一个字（正印/壬水/调候三篇都提到"壬水"），真正精准的只有"伤官"那条。查询词里的"十神"（正官/比肩/食神）**一条都没命中** —— 因为知识库里没有对应条目，而 `壬` 这个字的区分度太低。
+
+**结论**：不是语义检索，命中质量高度依赖知识库标签和查询词的重合度。知识库一变大，噪声会迅速上升。修法有两条：给查询词加权重（日主低于十神），或换向量检索（`RagSearchResult.mode` 字段已预留降级标记）。
 
 ### 4. 晚子时流派只有默认值，没有切换入口
 
