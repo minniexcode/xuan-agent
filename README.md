@@ -67,17 +67,21 @@ Entry（CLI / SDK）
                   / ProfileStore / PromptManager / SafetyGuard / ConfigManager / Logger）
 ```
 
-规划目录：
+目录结构：
 
 ```text
 src/
-  index.ts        # SDK 公开入口（唯一默认公开 API）
-  cli/  api/      # 入口层，不直接调用排盘库 / LangChain / RAG / 存储
-  agent/  workflows/
-  skills/  providers/  calculators/  rag/  memory/  profiles/
-  prompts/  safety/  config/  logging/  schemas/  storage/  errors/
-knowledge/seed/   # 最小知识库种子
-examples/  tests/
+  index.ts          # SDK 公开入口（唯一默认公开 API）
+  cli/              # commander 命令：bazi / rag / session / profile / provider / config
+  agent/            # XuanAgent 线性编排（校验→排盘→RAG→Prompt→LLM→审计→存会话）
+  calculators/      # BaziCalculator 接口 + tyme4ts adapter
+  providers/        # LlmProvider 接口 + ProviderFactory + openai-compatible / mock
+  rag/              # RagEngine（关键词检索）+ document-loader
+  conversations/    # ConversationState + ConversationStore（本地 JSON）
+  profiles/         # ProfileStore
+  prompts/ safety/ config/ logging/ schemas/ storage/ errors/
+knowledge/seed/     # 最小知识库种子（随包发布）
+tests/
 ```
 
 ## 安装与使用
