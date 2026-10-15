@@ -2,6 +2,8 @@ import { Command } from "commander";
 import { VERSION } from "../version.js";
 import { registerBaziCommand } from "./commands/bazi.js";
 import { registerConfigCommand } from "./commands/config.js";
+import { registerProfileCommand } from "./commands/profile.js";
+import { registerProviderCommand } from "./commands/provider.js";
 import { registerRagCommand } from "./commands/rag.js";
 import { registerSessionCommand } from "./commands/session.js";
 
@@ -16,6 +18,8 @@ export function buildProgram(): Command {
 
   registerBaziCommand(program);
   registerConfigCommand(program);
+  registerProfileCommand(program);
+  registerProviderCommand(program);
   registerRagCommand(program);
   registerSessionCommand(program);
 

@@ -17,7 +17,7 @@ describe("XuanAgent.analyzeBazi（mock Provider）", () => {
         gender: "male",
         calendar: "solar",
       },
-      { temporary: true },
+      { temporary: true, mode: "beginner" },
     );
 
     expect(result.skill).toBe("bazi");
@@ -26,6 +26,7 @@ describe("XuanAgent.analyzeBazi（mock Provider）", () => {
     expect(result.content.boundaryNotice).toContain("自我探索");
     expect(result.safety.boundaryApplied).toBe(true);
     expect(result.metadata.ragUsed).toBe(false);
+    expect(result.citations).toEqual([]);
   });
 
   it("非法输入抛 VALIDATION_ERROR", async () => {

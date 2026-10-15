@@ -19,10 +19,13 @@ export type {
   LlmProvider,
   LlmTextOutput,
   ProviderCapabilities,
+  ProviderInfo,
+  ProviderStatus,
   TextLlmInput,
   TextLlmMessage,
 } from "./providers/index.js";
 export {
+  listProviders,
   MockProvider,
   OpenAiCompatibleProvider,
   ProviderFactory,
@@ -63,5 +66,11 @@ export type {
   ProviderName,
 } from "./schemas/index.js";
 export { BirthInputSchema } from "./schemas/index.js";
+export type {
+  ProfileInput,
+  ProfilePreferences,
+  SaveProfileOptions,
+  UserProfile,
+} from "./schemas/profile.js";
 
 export { VERSION } from "./version.js";
