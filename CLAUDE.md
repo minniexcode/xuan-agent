@@ -20,7 +20,7 @@ This is the non-negotiable rule behind the whole design:
 
 - **TypeScript-first**, targeting Node.js (`"type": "module"`, `engines.node >= 20`). No browser runtime in V1.
 - A single npm package named `xuan-agent`: CLI command `xuan` + SDK entry `xuan-agent`, sharing one core. **No** monorepo.
-- Agent orchestration via **LangGraph.js**; LLM abstraction via **LangChain.js**, with a `ProviderFactory` isolating providers. V1 defaults to a single provider — DeepSeek through the generic OpenAI-compatible adapter (the Anthropic adapter is kept as a skeleton); multi-provider comparison is deferred until after V1.
+- Agent orchestration and LLM abstraction use a lightweight hand-rolled layer — `XuanAgent` (linear flow) + `LlmProvider`/`ProviderFactory` (openai-compatible adapter via `fetch`) — **no LangChain.js / LangGraph.js in V1** (ADR-0011). V1 defaults to a single provider — DeepSeek through the generic OpenAI-compatible adapter (the Anthropic adapter is kept as a skeleton); multi-provider comparison is deferred until after V1.
 - BaZi calculation via **`tyme4ts`**, isolated behind the `BaziCalculator` interface.
 - RAG, user profiles (local JSON), session state, and config (`.env`) are all **local-first**.
 - **Python is not a V1 default dependency.** It is only considered as a fallback adapter behind `BaziCalculator` if `tyme4ts` proves insufficient.

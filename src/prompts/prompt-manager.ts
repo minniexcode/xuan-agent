@@ -1,4 +1,5 @@
 import type { TextLlmInput } from "../providers/provider.types.js";
+import type { RagCitation } from "../schemas/analysis.js";
 import type { BaziChart } from "../schemas/bazi.js";
 import type { OutputMode } from "../schemas/index.js";
 
@@ -41,6 +42,47 @@ export class PromptManager {
         messages: [{ role: "user", content: user }],
       },
       version: `bazi-${mode}-v0`,
+    };
+  }
+
+  /** 同盘追问：复用已排好的 chart，不重新排盘（FR-BAZI-05）。 */
+  buildFollowupPrompt(
+    chart: BaziChart,
+    question: string,
+    mode: OutputMode,
+    citations: RagCitation[] = [],
+  ): RenderedPrompt {
+    const citationText =
+      citations.length === 0
+        ? "（未检索到额外依据，仅基于盘面回答。）"
+        : [
+            "以下为知识库检索到的参考（区分原文与释义，仅作解释依据，不作定论）：",
+            ...citations.map(
+              (citation, i) =>
+                `${i + 1}. ${citation.sourceName}（${citation.hitNote}）\n` +
+                `   原文：${citation.excerpt}\n` +
+                `   释义：${citation.interpretation || "（无）"}`,
+            ),
+          ].join("\n");
+
+    const user = [
+      `以下是已排好的盘面（结构化 JSON，本轮沿用，不重新排盘）：`,
+      JSON.stringify(chart),
+      "",
+      `用户追问：${question}`,
+      "",
+      citationText,
+      "",
+      modeInstruction(mode),
+      "请结合当前盘面回答追问，不要脱离盘面泛泛而谈。",
+    ].join("\n");
+
+    return {
+      input: {
+        system: SAFETY_SYSTEM,
+        messages: [{ role: "user", content: user }],
+      },
+      version: `bazi-followup-${mode}-v0`,
     };
   }
 }

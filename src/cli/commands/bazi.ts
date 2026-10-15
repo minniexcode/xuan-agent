@@ -16,6 +16,13 @@ interface AnalyzeOptions {
   json?: boolean;
 }
 
+interface AskOptions {
+  session?: string;
+  question: string;
+  mode?: string;
+  json?: boolean;
+}
+
 export function registerBaziCommand(program: Command): void {
   const bazi = program.command("bazi").description("八字排盘与解读");
 
@@ -48,6 +55,23 @@ export function registerBaziCommand(program: Command): void {
 
       const agent = createXuanAgent();
       const result = await agent.analyzeBazi(request);
+      process.stdout.write(`${options.json ? renderJson(result) : renderAnalysisResult(result)}\n`);
+    });
+
+  bazi
+    .command("ask")
+    .description("对最近一次（或指定）会话做同盘追问")
+    .option("--session <id>", "会话 ID（缺省续最近一次会话）")
+    .requiredOption("--question <text>", "追问内容")
+    .option("--mode <beginner|advanced>", "输出模式（缺省沿用会话模式）")
+    .option("--json", "JSON 输出")
+    .action(async (options: AskOptions) => {
+      const agent = createXuanAgent();
+      const result = await agent.askFollowup({
+        sessionId: options.session,
+        question: options.question,
+        mode: options.mode as "beginner" | "advanced" | undefined,
+      });
       process.stdout.write(`${options.json ? renderJson(result) : renderAnalysisResult(result)}\n`);
     });
 }
