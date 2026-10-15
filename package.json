@@ -1,0 +1,51 @@
+{
+  "name": "xuan-agent",
+  "version": "0.1.0",
+  "description": "Five Arts AI Agent for BaZi exploration.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "xuan": "./dist/cli/main.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./schemas": {
+      "types": "./dist/schemas/index.d.ts",
+      "import": "./dist/schemas/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "knowledge/seed",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:fixtures": "vitest run tests/fixtures",
+    "test:smoke": "vitest run tests/smoke",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "pack:dry": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "commander": "^15.0.0",
+    "tyme4ts": "^1.5.3",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
+    "@types/node": "^26.6.5",
+    "tsup": "^9.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.4"
+  }
+}
