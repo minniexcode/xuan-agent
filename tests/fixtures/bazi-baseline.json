@@ -1,0 +1,529 @@
+{
+  "_meta": {
+    "description": "玄枢八字排盘回归基线（防回归，不用于证明正确性）",
+    "library": "tyme4ts",
+    "libraryVersion": "1.5.3",
+    "sect": "晚子时（23:00–23:59）日柱算次日（School B，tyme4ts 默认，与问真等主流排盘一致）",
+    "generated": "2026-10-15",
+    "verified": "三实现交叉对拍（tyme4ts / lunar-typescript / cnlunar，21 例）+ 权威节气时刻核对。详见 docs/product-architecture.md §11。",
+    "note": "期望值取自已验证的库输出；如与库升级后的输出不符，先判断是回归还是刻意变更，不得直接改期望值。"
+  },
+  "cases": [
+    {
+      "id": 1,
+      "input": {
+        "calendar": "solar",
+        "time": "08:30",
+        "gender": "male",
+        "date": "1995-03-12"
+      },
+      "covers": "基线：普通白天出生",
+      "expect": {
+        "solar": "1995年3月12日",
+        "year": "乙亥",
+        "month": "己卯",
+        "day": "壬寅",
+        "hour": "甲辰",
+        "dayMaster": "壬",
+        "forward": false,
+        "daYun": [
+          "戊寅(3)",
+          "丁丑(13)",
+          "丙子(23)"
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "input": {
+        "calendar": "solar",
+        "time": "14:20",
+        "gender": "female",
+        "date": "1988-11-05"
+      },
+      "covers": "基线：女命",
+      "expect": {
+        "solar": "1988年11月5日",
+        "year": "戊辰",
+        "month": "壬戌",
+        "day": "甲子",
+        "hour": "辛未",
+        "dayMaster": "甲",
+        "forward": false,
+        "daYun": [
+          "辛酉(11)",
+          "庚申(21)",
+          "己未(31)"
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "input": {
+        "calendar": "solar",
+        "time": "22:00",
+        "gender": "male",
+        "date": "2003-07-21"
+      },
+      "covers": "亥时末（非子时）对照",
+      "expect": {
+        "solar": "2003年7月21日",
+        "year": "癸未",
+        "month": "己未",
+        "day": "乙未",
+        "hour": "丁亥",
+        "dayMaster": "乙",
+        "forward": false,
+        "daYun": [
+          "戊午(6)",
+          "丁巳(16)",
+          "丙辰(26)"
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "input": {
+        "calendar": "solar",
+        "time": "06:15",
+        "gender": "female",
+        "date": "1957-01-30"
+      },
+      "covers": "较早年代",
+      "expect": {
+        "solar": "1957年1月30日",
+        "year": "丙申",
+        "month": "辛丑",
+        "day": "壬寅",
+        "hour": "癸卯",
+        "dayMaster": "壬",
+        "forward": false,
+        "daYun": [
+          "庚子(9)",
+          "己亥(19)",
+          "戊戌(29)"
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "input": {
+        "calendar": "solar",
+        "time": "12:00",
+        "gender": "male",
+        "date": "1990-02-04"
+      },
+      "covers": "立春当日——年柱以立春为界",
+      "expect": {
+        "solar": "1990年2月4日",
+        "year": "庚午",
+        "month": "戊寅",
+        "day": "庚子",
+        "hour": "壬午",
+        "dayMaster": "庚",
+        "forward": true,
+        "daYun": [
+          "己卯(10)",
+          "庚辰(20)",
+          "辛巳(30)"
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "input": {
+        "calendar": "solar",
+        "time": "23:30",
+        "gender": "female",
+        "date": "2000-02-03"
+      },
+      "covers": "立春前一日 + 晚子时（双重边界）",
+      "expect": {
+        "solar": "2000年2月3日",
+        "year": "己卯",
+        "month": "丁丑",
+        "day": "壬辰",
+        "hour": "庚子",
+        "dayMaster": "壬",
+        "forward": true,
+        "daYun": [
+          "戊寅(1)",
+          "己卯(11)",
+          "庚辰(21)"
+        ]
+      }
+    },
+    {
+      "id": 7,
+      "input": {
+        "calendar": "solar",
+        "time": "10:00",
+        "gender": "male",
+        "date": "1992-03-05"
+      },
+      "covers": "惊蛰附近——月柱分界（权威节气 1992-03-05 15:52:08）",
+      "expect": {
+        "solar": "1992年3月5日",
+        "year": "壬申",
+        "month": "壬寅",
+        "day": "庚辰",
+        "hour": "辛巳",
+        "dayMaster": "庚",
+        "forward": true,
+        "daYun": [
+          "癸卯(1)",
+          "甲辰(11)",
+          "乙巳(21)"
+        ]
+      }
+    },
+    {
+      "id": 8,
+      "input": {
+        "calendar": "solar",
+        "time": "20:00",
+        "gender": "female",
+        "date": "1985-08-07"
+      },
+      "covers": "立秋附近——月柱分界（权威节气 1985-08-07 22:04:16）",
+      "expect": {
+        "solar": "1985年8月7日",
+        "year": "乙丑",
+        "month": "癸未",
+        "day": "戊寅",
+        "hour": "壬戌",
+        "dayMaster": "戊",
+        "forward": true,
+        "daYun": [
+          "甲申(1)",
+          "乙酉(11)",
+          "丙戌(21)"
+        ]
+      }
+    },
+    {
+      "id": 9,
+      "input": {
+        "calendar": "solar",
+        "time": "23:30",
+        "gender": "male",
+        "date": "1990-06-15"
+      },
+      "covers": "晚子时（23:00–23:59）",
+      "expect": {
+        "solar": "1990年6月15日",
+        "year": "庚午",
+        "month": "壬午",
+        "day": "壬子",
+        "hour": "庚子",
+        "dayMaster": "壬",
+        "forward": true,
+        "daYun": [
+          "癸未(8)",
+          "甲申(18)",
+          "乙酉(28)"
+        ]
+      }
+    },
+    {
+      "id": 10,
+      "input": {
+        "calendar": "solar",
+        "time": "00:30",
+        "gender": "male",
+        "date": "1990-06-16"
+      },
+      "covers": "早子时（与例 9 同一夜，跨零点）",
+      "expect": {
+        "solar": "1990年6月16日",
+        "year": "庚午",
+        "month": "壬午",
+        "day": "壬子",
+        "hour": "庚子",
+        "dayMaster": "壬",
+        "forward": true,
+        "daYun": [
+          "癸未(8)",
+          "甲申(18)",
+          "乙酉(28)"
+        ]
+      }
+    },
+    {
+      "id": 11,
+      "input": {
+        "calendar": "solar",
+        "time": "22:59",
+        "gender": "female",
+        "date": "1993-09-09"
+      },
+      "covers": "子时前一刻（对照）",
+      "expect": {
+        "solar": "1993年9月9日",
+        "year": "癸酉",
+        "month": "辛酉",
+        "day": "癸巳",
+        "hour": "癸亥",
+        "dayMaster": "癸",
+        "forward": true,
+        "daYun": [
+          "壬戌(11)",
+          "癸亥(21)",
+          "甲子(31)"
+        ]
+      }
+    },
+    {
+      "id": 12,
+      "input": {
+        "calendar": "solar",
+        "time": "23:00",
+        "gender": "female",
+        "date": "1993-09-10"
+      },
+      "covers": "晚子时起点（23:00 整）",
+      "expect": {
+        "solar": "1993年9月10日",
+        "year": "癸酉",
+        "month": "辛酉",
+        "day": "乙未",
+        "hour": "丙子",
+        "dayMaster": "乙",
+        "forward": true,
+        "daYun": [
+          "壬戌(10)",
+          "癸亥(20)",
+          "甲子(30)"
+        ]
+      }
+    },
+    {
+      "id": 13,
+      "input": {
+        "calendar": "lunar",
+        "time": "09:00",
+        "gender": "male",
+        "lunar": [
+          1995,
+          8,
+          15
+        ]
+      },
+      "covers": "农历常规日",
+      "expect": {
+        "solar": "1995年9月9日",
+        "year": "乙亥",
+        "month": "乙酉",
+        "day": "癸卯",
+        "hour": "丁巳",
+        "dayMaster": "癸",
+        "forward": false,
+        "daYun": [
+          "甲申(1)",
+          "癸未(11)",
+          "壬午(21)"
+        ]
+      }
+    },
+    {
+      "id": 14,
+      "input": {
+        "calendar": "lunar",
+        "time": "12:00",
+        "gender": "female",
+        "lunar": [
+          2020,
+          -4,
+          1
+        ]
+      },
+      "covers": "闰月输入（农历 2020 闰四月初一）",
+      "expect": {
+        "solar": "2020年5月23日",
+        "year": "庚子",
+        "month": "辛巳",
+        "day": "丙寅",
+        "hour": "甲午",
+        "dayMaster": "丙",
+        "forward": false,
+        "daYun": [
+          "庚辰(7)",
+          "己卯(17)",
+          "戊寅(27)"
+        ]
+      }
+    },
+    {
+      "id": 15,
+      "input": {
+        "calendar": "lunar",
+        "time": "00:10",
+        "gender": "female",
+        "lunar": [
+          1984,
+          1,
+          1
+        ]
+      },
+      "covers": "农历跨年（正月初一仍在立春前）",
+      "expect": {
+        "solar": "1984年2月2日",
+        "year": "癸亥",
+        "month": "乙丑",
+        "day": "丙寅",
+        "hour": "戊子",
+        "dayMaster": "丙",
+        "forward": true,
+        "daYun": [
+          "丙寅(2)",
+          "丁卯(12)",
+          "戊辰(22)"
+        ]
+      }
+    },
+    {
+      "id": 16,
+      "input": {
+        "calendar": "solar",
+        "time": "10:00",
+        "gender": "male",
+        "date": "1990-05-10"
+      },
+      "covers": "大运顺（阳年男）",
+      "expect": {
+        "solar": "1990年5月10日",
+        "year": "庚午",
+        "month": "辛巳",
+        "day": "乙亥",
+        "hour": "辛巳",
+        "dayMaster": "乙",
+        "forward": true,
+        "daYun": [
+          "壬午(10)",
+          "癸未(20)",
+          "甲申(30)"
+        ]
+      }
+    },
+    {
+      "id": 17,
+      "input": {
+        "calendar": "solar",
+        "time": "10:00",
+        "gender": "male",
+        "date": "1991-05-10"
+      },
+      "covers": "大运逆（阴年男）",
+      "expect": {
+        "solar": "1991年5月10日",
+        "year": "辛未",
+        "month": "癸巳",
+        "day": "庚辰",
+        "hour": "辛巳",
+        "dayMaster": "庚",
+        "forward": false,
+        "daYun": [
+          "壬辰(2)",
+          "辛卯(12)",
+          "庚寅(22)"
+        ]
+      }
+    },
+    {
+      "id": 18,
+      "input": {
+        "calendar": "solar",
+        "time": "10:00",
+        "gender": "female",
+        "date": "1990-05-10"
+      },
+      "covers": "大运逆（阳年女）",
+      "expect": {
+        "solar": "1990年5月10日",
+        "year": "庚午",
+        "month": "辛巳",
+        "day": "乙亥",
+        "hour": "辛巳",
+        "dayMaster": "乙",
+        "forward": false,
+        "daYun": [
+          "庚辰(2)",
+          "己卯(12)",
+          "戊寅(22)"
+        ]
+      }
+    },
+    {
+      "id": 19,
+      "input": {
+        "calendar": "solar",
+        "time": "10:00",
+        "gender": "female",
+        "date": "1991-05-10"
+      },
+      "covers": "大运顺（阴年女）",
+      "expect": {
+        "solar": "1991年5月10日",
+        "year": "辛未",
+        "month": "癸巳",
+        "day": "庚辰",
+        "hour": "辛巳",
+        "dayMaster": "庚",
+        "forward": true,
+        "daYun": [
+          "甲午(10)",
+          "乙未(20)",
+          "丙申(30)"
+        ]
+      }
+    },
+    {
+      "id": 20,
+      "input": {
+        "calendar": "solar",
+        "time": "03:00",
+        "gender": "male",
+        "date": "1975-12-25"
+      },
+      "covers": "起运时间（距节令较远）",
+      "expect": {
+        "solar": "1975年12月25日",
+        "year": "乙卯",
+        "month": "戊子",
+        "day": "乙巳",
+        "hour": "戊寅",
+        "dayMaster": "乙",
+        "forward": false,
+        "daYun": [
+          "丁亥(7)",
+          "丙戌(17)",
+          "乙酉(27)"
+        ]
+      }
+    },
+    {
+      "id": 21,
+      "input": {
+        "calendar": "solar",
+        "time": "18:45",
+        "gender": "female",
+        "date": "2010-04-02"
+      },
+      "covers": "起运时间（距节令较近）",
+      "expect": {
+        "solar": "2010年4月2日",
+        "year": "庚寅",
+        "month": "己卯",
+        "day": "壬午",
+        "hour": "己酉",
+        "dayMaster": "壬",
+        "forward": false,
+        "daYun": [
+          "戊寅(10)",
+          "丁丑(20)",
+          "丙子(30)"
+        ]
+      }
+    }
+  ]
+}

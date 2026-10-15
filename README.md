@@ -35,7 +35,7 @@ V1 聚焦八字命理：
 - 出生信息采集与确定性排盘
 - 通俗模式 / 进阶模式两层结构化解读
 - 围绕排盘结果的连续追问与同盘复用
-- 对话级记忆与用户档案级记忆
+- 会话记忆与用户档案记忆
 - RAG 古籍引用检索
 - 多 Provider 可切换（V1 默认单一 Provider）
 
@@ -51,10 +51,10 @@ V1 明确不做：相术图像分析、多 Provider 对比、HTTP API 交付（�
 | 交付形态 | 单一 npm 包 `xuan-agent`：CLI 命令 `xuan` + SDK 入口 `xuan-agent`，无 monorepo |
 | Agent 编排 | LangGraph.js |
 | LLM 抽象 | LangChain.js + `ProviderFactory`（OpenAI / Anthropic / DeepSeek / 通用 OpenAI 兼容） |
-| 八字计算 | `lunar-typescript`，隔离在 `BaziCalculator` 接口之后 |
+| 八字计算 | `tyme4ts`，隔离在 `BaziCalculator` 接口之后 |
 | RAG / 档案 / 会话 / 配置 | 全部本地优先 |
 
-Python **不是** V1 默认依赖，仅在 `lunar-typescript` 未通过样例集验证时作为 `BaziCalculator` 的后备 adapter 方向。
+Python **不是** V1 默认依赖，仅在 `tyme4ts` 能力不足时作为 `BaziCalculator` 的后备 adapter 方向。
 
 CLI 框架、HTTP 框架、构建工具、schema 库、测试框架与向量存储等框架级选择，留待[技术设计文档](docs/technical-design.md)确定。
 
@@ -63,8 +63,8 @@ CLI 框架、HTTP 框架、构建工具、schema 库、测试框架与向量存�
 ```text
 Entry（CLI / SDK / HTTP API adapters）
   → Orchestration（XuanAgent / LangGraphWorkflow / ConversationStateManager）
-    → Skill（bazi / rag-reference / profile-memory / provider-compare）
-      → Foundation（BaziCalculator / ProviderFactory / RagEngine / MemoryStore
+    → Skill（bazi / rag-reference / profile / provider-compare）
+      → Foundation（BaziCalculator / ProviderFactory / RagEngine / ConversationStore
                     / ProfileStore / PromptManager / SafetyGuard / ConfigManager / Logger）
 ```
 
@@ -119,7 +119,7 @@ const result = await agent.analyzeBazi({
 ```bash
 npm run typecheck      # tsc --noEmit
 npm test               # 单元 + 集成测试
-npm run test:fixtures  # 八字样例集测试
+npm run test:fixtures  # 八字回归基线
 npm run test:smoke     # CLI / SDK 冒烟测试
 npm run build
 npm run pack:dry       # npm pack --dry-run
@@ -134,12 +134,13 @@ npm run pack:dry       # npm pack --dry-run
 
 ## 文档
 
-- [`docs/prd.md`](docs/prd.md) —— 产品需求文档（PRD）
+- [`docs/prd.md`](docs/prd.md) —— 产品需求文档（PRD，简略：FR 索引）
+- [`docs/requirements.md`](docs/requirements.md) —— 详细功能需求规格
 - [`docs/product-architecture.md`](docs/product-architecture.md) —— 产品架构
 - [`docs/technical-design.md`](docs/technical-design.md) —— 技术设计（工程蓝图、契约、类型、流程、测试、里程碑）
-- [`docs/adr/`](docs/adr/README.md) —— 架构决策记录（ADR）
+- [`docs/adr.md`](docs/adr.md) —— 架构决策记录（ADR）
 
-文档顺序为 PRD → 产品架构 → 技术设计。三份文档与 ADR 共同构成唯一事实来源。
+文档顺序为 PRD → 详细需求规格 → 产品架构 → 技术设计；决策理由见 ADR。这些文档共同构成唯一事实来源。
 
 ## 贡献
 

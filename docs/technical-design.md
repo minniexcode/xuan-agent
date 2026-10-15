@@ -37,7 +37,7 @@ xuan-agent/
     providers/
     calculators/
     rag/
-    memory/
+    conversations/
     profiles/
     prompts/
     safety/
@@ -66,9 +66,9 @@ V1 不使用 monorepo。只有当后续出现独立前端、独立插件市场�
 | `src/workflows/` | LangGraph.js workflow 定义。 | 否 |
 | `src/skills/` | V1 Skills 与 SkillRegistry。 | 部分 |
 | `src/providers/` | ProviderFactory 和 LangChain.js adapters。 | 部分 |
-| `src/calculators/` | `BaziCalculator` 与 `lunar-typescript` adapter。 | 部分 |
+| `src/calculators/` | `BaziCalculator` 与 `tyme4ts` adapter。 | 部分 |
 | `src/rag/` | 知识库加载、chunk、embedding、检索、引用格式化。 | 部分 |
-| `src/memory/` | 会话级状态、checkpoint store。 | 否 |
+| `src/conversations/` | 会话状态、checkpoint store。 | 否 |
 | `src/profiles/` | 本地用户档案 CRUD。 | 部分 |
 | `src/prompts/` | Prompt 模板、版本、渲染。 | 否 |
 | `src/safety/` | 安全策略、输入检查、输出检查。 | 否 |
@@ -122,8 +122,8 @@ src/
       bazi.prompts.ts
     rag-reference/
       rag-reference.skill.ts
-    profile-memory/
-      profile-memory.skill.ts
+    profile/
+      profile.skill.ts
     provider-compare/
       provider-compare.skill.ts
   providers/
@@ -134,7 +134,7 @@ src/
       anthropic.adapter.ts
   calculators/
     bazi-calculator.ts
-    lunar-typescript-calculator.ts
+    tyme4ts-calculator.ts
     bazi-normalizer.ts
   rag/
     rag-engine.ts
@@ -143,10 +143,10 @@ src/
     embedding-provider.ts
     vector-store.ts
     citation-formatter.ts
-  memory/
+  conversations/
     conversation-state.ts
     checkpointer.ts
-    memory-store.ts
+    conversation-store.ts
   profiles/
     profile-store.ts
     profile-service.ts
@@ -237,7 +237,7 @@ V1 至少需要以下脚本：
     "build": "build command decided in technical design",
     "typecheck": "tsc --noEmit",
     "test": "unit and integration tests",
-    "test:fixtures": "bazi fixture tests",
+    "test:fixtures": "bazi regression baseline tests",
     "test:smoke": "cli and sdk smoke tests",
     "lint": "lint command decided in technical design",
     "pack:dry": "npm pack --dry-run"
@@ -344,13 +344,11 @@ V1 应使用 TypeScript 类型 + 运行时 schema 双层约束。运行时 schem
 export type OutputMode = "beginner" | "advanced" | "both";
 export type CalendarType = "solar" | "lunar";
 export type Gender = "male" | "female" | "unspecified";
-export type XiangshuType = "face" | "palm";
-export type ProviderName =
-  | "anthropic"
-  | "openai"
-  | "deepseek"
-  | "openai-compatible";
+export type XiangshuType = "face" | "palm"; // V2 前瞻
+export type ProviderName = "anthropic" | "openai-compatible" | "mock";
 ```
+
+`ProviderName` 只标识**服务方**；具体模型由 `model` 字段表达（例如 DeepSeek 走 `openai-compatible`，`model` 为 `deepseek-chat`）。`mock` 供测试使用。
 
 ### 17.2 `BirthInput`
 
@@ -380,7 +378,7 @@ export interface BirthInput {
 ```ts
 export interface BaziChart {
   source: {
-    library: "lunar-typescript" | string;
+    library: "tyme4ts" | string;
     version?: string;
     generatedAt: string;
   };
@@ -399,7 +397,7 @@ export interface BaziChart {
   solarTerms?: SolarTermInfo;
   luckPillars?: LuckPillar[];
   annualFortune?: AnnualFortune[];
-  symbolicStars?: SymbolicStar[];
+  symbolicStars?: SymbolicStar[]; // V2（库无命盘神煞，需自研）
   limitations: string[];
 }
 ```
@@ -443,7 +441,7 @@ export interface AnalysisResult<TStructured = unknown> {
     summary: string;
     sections: AnalysisSection[];
     followupQuestions: string[];
-    disclaimer: string;
+    boundaryNotice: string;
   };
   citations: RagCitation[];
   safety: {
@@ -496,7 +494,7 @@ export function createXuanAgent(options?: XuanAgentOptions): XuanAgent;
 - `config`
 - `providerFactory`
 - `skillRegistry`
-- `memoryStore`
+- `conversationStore`
 - `profileStore`
 - `ragEngine`
 - `logger`
@@ -537,6 +535,7 @@ export interface XuanAgent {
 | `xuan profile view` | 无 | `--user`、`--json` | 用户档案 |
 | `xuan profile save` | 视保存内容而定 | `--user`、`--confirm` | 保存结果 |
 | `xuan profile delete` | 无 | `--user`、`--confirm` | 删除结果 |
+| `xuan session clear` | 无 | `--session`、`--all` | 清理结果 |
 | `xuan config doctor` | 无 | `--json` | 配置健康检查 |
 
 `xuan xiangshu analyze`（相术）与 `xuan provider compare`（多 Provider 对比）为 V2 / V1 完成后能力，V1 不交付。
@@ -603,7 +602,7 @@ export interface WorkflowState {
   model?: string;
   input: unknown;
   chart?: BaziChart;
-  imageObservation?: XiangshuObservation;
+  imageObservation?: XiangshuObservation; // V2
   citations: RagCitation[];
   prompt?: RenderedPrompt;
   llmOutput?: unknown;
@@ -704,7 +703,7 @@ export interface LlmProvider {
   model: string;
   capabilities: ProviderCapabilities;
   invokeText(input: TextLlmInput): Promise<LlmTextOutput>;
-  invokeVision(input: VisionLlmInput): Promise<LlmVisionOutput>;
+  invokeVision(input: VisionLlmInput): Promise<LlmVisionOutput>; // V2
   streamText?(input: TextLlmInput): AsyncIterable<LlmTextChunk>;
 }
 ```
@@ -754,7 +753,7 @@ export interface SkillManifest<I = unknown, O = unknown> {
 | --- | --- | --- |
 | `bazi` | 校验出生信息、调用 `BaziCalculator`、组织八字解读。 | 直接让 LLM 排盘。 |
 | `rag-reference` | 检索资料、格式化引用。 | 伪造来源或把古籍当最终裁决。 |
-| `profile-memory` | 管理显式授权的档案。 | 默认保存敏感信息。 |
+| `profile` | 管理显式授权的档案。 | 默认保存敏感信息。 |
 | `provider-compare` | （V1 后）复用同一输入并列输出不同模型结果。 | 修改排盘或 RAG 证据。 |
 
 ## 24. RAG 文件格式与索引设计
@@ -790,7 +789,7 @@ export interface KnowledgeChunk {
   id: string;
   documentId: string;
   title: string;
-  domain: "bazi" | "face" | "palm" | "general";
+  domain: "bazi" | "face" | "palm" | "general"; // face/palm 为 V2
   tags: string[];
   sourceName: string;
   sourceType: string;
@@ -917,19 +916,15 @@ Prompt 不得只传自然语言生日描述给 LLM。
 | RAG 引用 | 引用区分原文、释义和总结。 |
 | 档案保存 | 未确认不写入，确认后写入。 |
 
-### 27.3 fixture 测试
+### 27.3 回归基线（fixture）
 
-排盘 fixture 必须覆盖：
+期望值取自已验证的库输出（见 `product-architecture.md` §11），**用于防回归，不用于证明正确性**。
 
-- 公历日期。
-- 农历日期。
-- 节气边界。
-- 子时边界。
-- 不确定时辰。
-- 性别影响的大运方向。
-- 真太阳时关闭。
+基线覆盖：公历、农历、闰月、节气边界、子时边界、大运顺逆四象限。
 
-fixture 来源必须记录，不能只写期望结果而无依据。
+每例断言：年柱、月柱、日柱、时柱、日主、十神基础关系、大运基础信息、排盘来源。
+
+期望值的来源与验证方式必须记录在基线文件里。
 
 ### 27.4 smoke 测试
 
@@ -969,11 +964,11 @@ await agent.getConfigSummary();
 完成：
 
 - `BaziCalculator`
-- `lunar-typescript` adapter
+- `tyme4ts` adapter
 - `BaziChart`
 - `xuan bazi analyze`
 - mock Provider 解读
-- 排盘 fixture 测试
+- 排盘回归基线测试
 
 ### 28.3 Milestone 3：Provider 与 Prompt
 
@@ -1015,11 +1010,11 @@ V1 不包含相术。图像输入校验、Vision capability、`xiangshu-face`、
 | PRD 需求 | 架构承载 |
 | --- | --- |
 | FR-BAZI-01 出生信息采集 | `BirthInput`、CLI/API/SDK validation。 |
-| FR-BAZI-02 确定性排盘 | `BaziCalculator`、`BaziChart`、排盘样例集。 |
+| FR-BAZI-02 确定性排盘 | `BaziCalculator`、`BaziChart`、排盘回归基线。 |
 | FR-BAZI-03 通俗模式解读 | `bazi` Skill、PromptManager、SafetyGuard。 |
 | FR-BAZI-04 进阶模式解读 | `bazi` Skill、RagEngine、RagCitation。 |
-| FR-BAZI-05 追问与同盘复用 | ConversationState、LangGraphWorkflow、MemoryStore。 |
-| FR-MEM-01 对话级记忆 | LangGraph checkpointer、ConversationState、MemoryStore。 |
+| FR-BAZI-05 追问与同盘复用 | ConversationState、LangGraphWorkflow、ConversationStore。 |
+| FR-MEM-01 对话级记忆 | LangGraph checkpointer、ConversationState、ConversationStore。 |
 | FR-MEM-02 用户档案级记忆 | UserProfile、ProfileStore、本地 JSON。 |
 | FR-RAG-01 知识库内容管理 | Local knowledge base、RagEngine、source metadata。 |
 | FR-RAG-02 检索与引用 | RagCitation、RagEngine、PromptManager。 |
@@ -1040,8 +1035,8 @@ V1 不包含相术。图像输入校验、Vision capability、`xiangshu-face`、
 - 明确 HTTP API 的请求、响应、文件上传、streaming 和错误码。
 - 写出 LangGraph.js workflow 的具体节点函数、边、checkpoint 配置和状态 reducer。
 - 写出 LangChain.js Provider adapter 的具体依赖、模型初始化和 mock provider。
-- 验证 `lunar-typescript` API，并完成 `BaziChart` 字段映射表。
+- 验证 `tyme4ts` API，并完成 `BaziChart` 字段映射表。
 - 设计 RAG chunk size、embedding provider、vector store 和 index rebuild 命令。
 - 落地 Prompt 模板文件、版本号策略和回归测试样例。
 - 落地 SafetyGuard 的规则表、测试样例和输出审计策略。
-- 建立排盘 fixture 来源、期望输出和自动化验证命令。
+- 落地排盘回归基线的期望输出与自动化验证命令。
