@@ -13,6 +13,29 @@ export type { ConfigDoctorReport, ConfigSummary, XuanConfig } from "./config/ind
 export { diagnoseConfig, getConfigSummary, loadEnvFile, resolveConfig } from "./config/index.js";
 export type { XuanErrorCode, XuanErrorShape, XuanErrorStage } from "./errors/index.js";
 export { XUAN_ERROR_CODES, XuanError } from "./errors/index.js";
+export type { RenderedPrompt } from "./prompts/index.js";
+export { PromptManager } from "./prompts/index.js";
+export type {
+  LlmProvider,
+  LlmTextOutput,
+  ProviderCapabilities,
+  TextLlmInput,
+  TextLlmMessage,
+} from "./providers/index.js";
+export {
+  MockProvider,
+  OpenAiCompatibleProvider,
+  ProviderFactory,
+} from "./providers/index.js";
+export type { SafetyAudit } from "./safety/index.js";
+export { SafetyGuard } from "./safety/index.js";
+export type {
+  AnalysisRequest,
+  AnalysisResult,
+  AnalysisSection,
+  RagCitation,
+} from "./schemas/analysis.js";
+export { BOUNDARY_NOTICE } from "./schemas/analysis.js";
 export type {
   BaziChart,
   BaziChartSource,

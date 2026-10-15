@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import { createXuanAgent } from "../../agent/index.js";
 import type { BirthInputRequest } from "../../schemas/index.js";
-import { renderBaziChart } from "../renderers/bazi-renderer.js";
+import { renderAnalysisResult } from "../renderers/bazi-renderer.js";
 import { renderJson } from "../renderers/json-renderer.js";
 
 interface AnalyzeOptions {
@@ -21,7 +21,7 @@ export function registerBaziCommand(program: Command): void {
 
   bazi
     .command("analyze")
-    .description("采集出生信息并排盘（解读待 Milestone 3 接入 Provider）")
+    .description("采集出生信息、排盘并用 LLM 解读")
     .requiredOption(
       "--date <YYYY-MM-DD>",
       "出生日期（公历 YYYY-MM-DD；农历同格式，闰月见 --leap-month）",
@@ -47,7 +47,7 @@ export function registerBaziCommand(program: Command): void {
       } as unknown as BirthInputRequest;
 
       const agent = createXuanAgent();
-      const chart = await agent.analyzeBazi(request);
-      process.stdout.write(`${options.json ? renderJson(chart) : renderBaziChart(chart)}\n`);
+      const result = await agent.analyzeBazi(request);
+      process.stdout.write(`${options.json ? renderJson(result) : renderAnalysisResult(result)}\n`);
     });
 }

@@ -6,6 +6,8 @@ export interface XuanDefaults {
   model: string;
   baseUrl: string;
   temperature: number;
+  /** 推理模型的思考会吃掉大量 token，解读默认给足额度。 */
+  maxTokens: number;
   enableVision: boolean;
   enableStreaming: boolean;
   logLevel: LogLevel;
@@ -17,6 +19,7 @@ export const DEFAULTS: XuanDefaults = {
   model: "deepseek-chat",
   baseUrl: "https://api.deepseek.com/v1",
   temperature: 0.4,
+  maxTokens: 16000,
   enableVision: false,
   enableStreaming: true,
   logLevel: "info",
