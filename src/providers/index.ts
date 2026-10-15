@@ -1,3 +1,4 @@
+// Provider layer barrel: adapters, capability types, catalog, and the factory.
 export { MockProvider } from "./mock.adapter.js";
 export { OpenAiCompatibleProvider } from "./openai-compatible.adapter.js";
 export type {

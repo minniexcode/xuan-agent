@@ -8,6 +8,7 @@ import type {
   TextLlmInput,
 } from "./provider.types.js";
 
+/** Capabilities advertised by this adapter: text only in V1. */
 const CAPABILITIES: ProviderCapabilities = {
   text: true,
   vision: false,
@@ -20,16 +21,20 @@ export interface OpenAiCompatibleOptions {
   baseUrl: string;
   apiKey: string;
   model: string;
-  /** 每次会话的稳定 ID（opencode.ai 需要，用于路由与缓存）。 */
+  /** Stable per-conversation ID (opencode.ai requires it, for routing and caching). */
   sessionId?: string;
   temperature?: number;
   defaultMaxTokens?: number;
 }
 
 /**
- * OpenAI 兼容的文本 Provider。DeepSeek（经 opencode.ai gateway）走此 adapter。
- * 注意：opencode.ai 要求 `x-opencode-session` 头；模型可能是推理模型（有 reasoning_content），
- * 因此默认 max_tokens 给足，最终答案取 `choices[0].message.content`。
+ * OpenAI-compatible text provider. DeepSeek (via the opencode.ai gateway) runs through
+ * this adapter (FR-LLM-02).
+ *
+ * Gotchas: opencode.ai requires the `x-opencode-session` header — without it the gateway
+ * returns 400 `MissingSessionID`. The model may be a reasoning model, which emits its
+ * thinking into `reasoning_content` and can consume the whole token budget; that is why
+ * `max_tokens` is set generously and only `choices[0].message.content` is read as the answer.
  */
 export class OpenAiCompatibleProvider implements LlmProvider {
   readonly name: ProviderName = "openai-compatible";
@@ -43,14 +48,17 @@ export class OpenAiCompatibleProvider implements LlmProvider {
   private readonly defaultMaxTokens: number;
 
   constructor(options: OpenAiCompatibleOptions) {
+    // Strip trailing slashes so `/chat/completions` never doubles up.
     this.baseUrl = options.baseUrl.replace(/\/+$/, "");
     this.apiKey = options.apiKey;
     this.model = options.model;
     this.sessionId = options.sessionId ?? `xuan-${randomUUID()}`;
     this.temperature = options.temperature;
+    // Config supplies 16000; this fallback (4096) only applies to direct construction.
     this.defaultMaxTokens = options.defaultMaxTokens ?? 4096;
   }
 
+  /** Send the chat completion request; throws `XuanError` on network or non-2xx failure. */
   async invokeText(input: TextLlmInput): Promise<LlmTextOutput> {
     const messages = [
       ...(input.system !== undefined ? [{ role: "system" as const, content: input.system }] : []),
@@ -64,6 +72,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${this.apiKey}`,
+          // Required by the opencode.ai gateway; missing it yields 400 `MissingSessionID`.
           "x-opencode-session": this.sessionId,
           "User-Agent": "xuan-agent/0.1.0",
         },
@@ -84,6 +93,8 @@ export class OpenAiCompatibleProvider implements LlmProvider {
     }
 
     if (!response.ok) {
+      // Stash status + the first 500 chars of the body so failures are debuggable
+      // without dumping the whole (possibly huge) response.
       const body = await response.text().catch(() => "");
       throw new XuanError({
         code: "LLM_ERROR",
@@ -97,6 +108,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
     const data = (await response.json()) as {
       choices?: { message?: { content?: string } }[];
     };
+    // Read only the answer content — `reasoning_content` is deliberately ignored.
     return { text: data.choices?.[0]?.message?.content ?? "" };
   }
 }

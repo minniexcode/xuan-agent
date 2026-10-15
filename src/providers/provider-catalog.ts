@@ -1,8 +1,10 @@
 import type { ProviderName } from "../schemas/index.js";
 import type { ProviderCapabilities } from "./provider.types.js";
 
+/** Lifecycle state of a provider: usable, stubbed, or a deterministic test double. */
 export type ProviderStatus = "ready" | "skeleton" | "mock";
 
+/** A provider's advertised capabilities, for `xuan provider list` and diagnostics. */
 export interface ProviderInfo {
   name: ProviderName;
   defaultModel?: string;
@@ -10,6 +12,7 @@ export interface ProviderInfo {
   status: ProviderStatus;
 }
 
+/** Baseline capability set for V1 adapters: text only, everything else off. */
 const TEXT_ONLY: ProviderCapabilities = {
   text: true,
   vision: false,
@@ -18,7 +21,11 @@ const TEXT_ONLY: ProviderCapabilities = {
   toolCalling: false,
 };
 
-/** 已知 Provider 能力表（供 `xuan provider list` 与诊断使用）。 */
+/**
+ * Static table of known providers and their capabilities (used by `xuan provider list`
+ * and diagnostics). Deliberately decoupled from ProviderFactory so that listing
+ * capabilities never requires instantiating — or configuring — a provider.
+ */
 export function listProviders(): ProviderInfo[] {
   return [
     {

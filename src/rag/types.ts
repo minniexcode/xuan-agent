@@ -1,16 +1,22 @@
 import type { RagCitation } from "../schemas/analysis.js";
 
-/** 知识库域。face / palm 为 V2 相术，V1 仅 bazi / general。 */
+/** Knowledge-base domain. `face` / `palm` are V2 physiognomy (相术); V1 uses only `bazi` / `general`. */
 export type KnowledgeDomain = "bazi" | "face" | "palm" | "general";
 
+/** Copyright status of a source. Only `usable` entries enter the core knowledge base (FR-RAG-01). */
 export type CopyrightStatus = "usable" | "unknown" | "restricted";
 
-/** 引用中区分的三类内容（FR-RAG-02）。 */
+/**
+ * The three content kinds a citation can be labelled with (FR-RAG-02):
+ * original text (原文), interpretation (释义), or agent summary (总结).
+ */
 export type CitationContentKind = "原文" | "释义" | "总结";
 
-/** 单条知识 chunk（technical-design.md §24.2）。 */
+/** A single knowledge chunk — the unit indexed and returned as a citation (technical-design.md §24.2). */
 export interface KnowledgeChunk {
+  /** Stable chunk id; a local knowledge-base entry with the same id overrides the seed (FR-RAG-01). */
   id: string;
+  /** Source document id, usually the filename without extension. */
   documentId: string;
   title: string;
   domain: KnowledgeDomain;
@@ -18,23 +24,25 @@ export interface KnowledgeChunk {
   sourceName: string;
   sourceType: string;
   copyrightStatus: CopyrightStatus;
-  /** 原文或整理文本。 */
+  /** Original or curated text. */
   text: string;
-  /** 现代释义。 */
+  /** Modern-language interpretation (释义). */
   interpretation?: string;
 }
 
+/** Input for a RAG search (FR-RAG-02). */
 export interface RagSearchOptions {
   query: string;
-  /** 最多返回条数，默认 5。 */
+  /** Maximum number of results, default 5. */
   topK?: number;
-  /** 按域过滤；缺省不过滤（general 始终命中）。 */
+  /** Filter by domain; when omitted no filtering happens (`general` chunks always match). */
   domain?: KnowledgeDomain;
 }
 
+/** Result of a RAG search. */
 export interface RagSearchResult {
   query: string;
-  /** V1 固定 "keyword"；向量索引不可用时在此降级标记（technical-design.md §24.3）。 */
+  /** Always `"keyword"` in V1; this is where the degraded mode would be marked when a vector index is unavailable (technical-design.md §24.3). */
   mode: "keyword";
   citations: RagCitation[];
 }

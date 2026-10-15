@@ -1,8 +1,11 @@
 /**
- * 玄枢（xuan-agent）SDK 入口。
+ * Xuan-agent (玄枢) SDK entry point.
  *
- * 只有本文件（以及 package.json `exports` 中列出的 `./schemas`）是公开 API；
- * 内部模块不得被调用方直接依赖。
+ * Only this file (plus the `./schemas` subpath listed in package.json `exports`) is public API;
+ * internal modules must not be depended on directly by callers.
+ *
+ * Deliberately NOT exported: the `conversations/` and `profiles/` stores, `storage/`,
+ * and `logging/` — these are internal implementation details, not part of the public surface.
  */
 
 export type { XuanAgent, XuanAgentOptions } from "./agent/index.js";

@@ -3,6 +3,7 @@ import type { BaziChart } from "../../schemas/bazi.js";
 
 const PILLAR_LABEL = { year: "年柱", month: "月柱", day: "日柱", hour: "时柱" } as const;
 
+/** Render the structured chart (Four Pillars (四柱), Five Elements (五行), Ten Gods (十神), Luck Pillars (大运)) as Chinese text. */
 export function renderBaziChart(chart: BaziChart): string {
   const { pillars } = chart;
   const hour = pillars.hour?.ganZhi ?? "（未知）";
@@ -32,6 +33,12 @@ export function renderBaziChart(chart: BaziChart): string {
   ].join("\n");
 }
 
+/**
+ * Render a full analysis (chart + interpretation + citations + safety notes) as Chinese text.
+ *
+ * Serves `xuan bazi analyze` and `xuan bazi ask`; the trailing session hint lets the
+ * user continue with `xuan bazi ask` (FR-BAZI-05 follow-up / same-chart reuse).
+ */
 export function renderAnalysisResult(result: AnalysisResult<BaziChart>): string {
   const lines: string[] = [
     renderBaziChart(result.structured),

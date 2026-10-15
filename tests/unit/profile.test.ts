@@ -6,11 +6,14 @@ import { type BirthInputRequest, createXuanAgent } from "../../src/index.js";
 import { createLogger } from "../../src/logging/index.js";
 import { ProfileStore } from "../../src/profiles/index.js";
 
+// Isolated temp directory: profiles are written to disk, so tests must never
+// touch the user's real profile data.
 const dir = mkdtempSync(join(tmpdir(), "xuan-profile-"));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 const silent = createLogger("silent");
 
+// Shared valid birth input reused across the profile cases.
 const birth: BirthInputRequest = {
   date: "1995-03-12",
   time: "08:30",
@@ -18,6 +21,7 @@ const birth: BirthInputRequest = {
   calendar: "solar",
 };
 
+// Injects the temp-backed profile store so each test is fully isolated.
 function makeAgent() {
   return createXuanAgent({
     config: { provider: "mock" },
@@ -26,7 +30,10 @@ function makeAgent() {
   });
 }
 
+// User profile behaviour for FR-MEM-02: explicit confirmation is required before
+// any write, and profiles are stored as local JSON.
 describe("XuanAgent 档案", () => {
+  // FR-MEM-02 rule 2: nothing is written until the user confirms.
   it("未确认时保存抛 PROFILE_PERMISSION_REQUIRED", async () => {
     const agent = makeAgent();
     await expect(
@@ -47,6 +54,8 @@ describe("XuanAgent 档案", () => {
     expect(found?.birth.gender).toBe("male");
   });
 
+  // Updating an existing profile must preserve createdAt (it is creation metadata,
+  // not a modification timestamp).
   it("默认 userId 为 default，更新保留 createdAt", async () => {
     const agent = makeAgent();
     const first = await agent.saveProfile(
@@ -63,6 +72,7 @@ describe("XuanAgent 档案", () => {
     expect(second.preferences.mode).toBe("advanced");
   });
 
+  // FR-MEM-02 rule 3: deletion, like saving, requires explicit confirmation.
   it("删除需确认", async () => {
     const agent = makeAgent();
     await agent.saveProfile(
@@ -76,6 +86,8 @@ describe("XuanAgent 档案", () => {
     expect(await agent.getProfile("tmp")).toBeNull();
   });
 
+  // Profile birth info flows through the same BirthInput schema, so ambiguous dates
+  // are rejected here too.
   it("非法出生信息抛 VALIDATION_ERROR", async () => {
     const agent = makeAgent();
     await expect(

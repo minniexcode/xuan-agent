@@ -23,6 +23,9 @@ interface AskOptions {
   json?: boolean;
 }
 
+/**
+ * Register `xuan bazi analyze` and `xuan bazi ask` (technical-design.md §19).
+ */
 export function registerBaziCommand(program: Command): void {
   const bazi = program.command("bazi").description("八字排盘与解读");
 
@@ -42,6 +45,8 @@ export function registerBaziCommand(program: Command): void {
     .option("--leap-month", "农历闰月（仅 --calendar lunar 时生效）")
     .option("--json", "JSON 输出")
     .action(async (options: AnalyzeOptions) => {
+      // Commander yields strings for optional flags, so the raw object is cast
+      // to the request type; the agent validates and narrows it.
       const request = {
         date: options.date,
         time: options.time,
@@ -70,6 +75,7 @@ export function registerBaziCommand(program: Command): void {
       const result = await agent.askFollowup({
         sessionId: options.session,
         question: options.question,
+        // Omitted --mode falls back to the session's stored mode inside the agent.
         mode: options.mode as "beginner" | "advanced" | undefined,
       });
       process.stdout.write(`${options.json ? renderJson(result) : renderAnalysisResult(result)}\n`);

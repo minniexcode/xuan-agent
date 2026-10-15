@@ -34,34 +34,55 @@ import {
   type UserProfile,
 } from "../schemas/profile.js";
 
+/**
+ * Construction options for `createXuanAgent`. Every collaborator is
+ * overridable so tests can inject mocks (dependency injection).
+ */
 export interface XuanAgentOptions {
-  /** 覆盖 .env 解析出的配置（优先级最高）。 */
+  /** Overrides merged on top of the .env-derived config (highest priority). */
   config?: Partial<XuanConfig>;
+  /** Logger override; defaults to one built from `config.logLevel`. */
   logger?: Logger;
+  /** Calculator override; defaults to `Tyme4tsBaziCalculator`. */
   calculator?: BaziCalculator;
-  /** 注入 Provider，覆盖 ProviderFactory（用于测试）。 */
+  /** Injected LLM provider, overriding `ProviderFactory` (for tests). */
   provider?: LlmProvider;
-  /** 注入 RAG 引擎（用于测试与自定义知识库）。 */
+  /** Injected RAG engine (for tests and custom knowledge bases). */
   ragEngine?: RagEngine;
-  /** 注入会话存储（用于测试与自定义会话目录）。 */
+  /** Injected conversation store (for tests and custom session dirs). */
   conversationStore?: ConversationStore;
-  /** 注入档案存储（用于测试与自定义档案目录）。 */
+  /** Injected profile store (for tests and custom profile dirs). */
   profileStore?: ProfileStore;
 }
 
+/**
+ * Public SDK surface of the agent. Entry layers (CLI / HTTP) call only these
+ * methods — never the calculator, RAG, storage or provider directly.
+ */
 export interface XuanAgent {
+  /** Non-secret config summary for `xuan config doctor` (FR-LLM-01). */
   getConfigSummary(): Promise<ConfigSummary>;
+  /** Validate input, calculate the chart, interpret, audit and persist session. */
   analyzeBazi(
     input: BirthInputRequest,
     request?: Partial<AnalysisRequest>,
   ): Promise<AnalysisResult<BaziChart>>;
+  /** Continue a stored session with a follow-up question (FR-BAZI-05). */
   askFollowup(input: FollowupInput): Promise<AnalysisResult<BaziChart>>;
+  /** Query the RAG knowledge base directly (FR-RAG-02). */
   searchRag(options: RagSearchOptions): Promise<RagSearchResult>;
+  /** Load a saved profile for `userId`, or null when absent (FR-MEM-02). */
   getProfile(userId?: string): Promise<UserProfile | null>;
+  /** Persist a profile; requires explicit confirm (FR-MEM-02). */
   saveProfile(input: ProfileInput, options?: SaveProfileOptions): Promise<UserProfile>;
+  /** Delete a profile; requires explicit confirm (FR-MEM-02). */
   deleteProfile(userId?: string, options?: SaveProfileOptions): Promise<void>;
 }
 
+/**
+ * Shallow-merge config overrides, skipping keys explicitly set to `undefined`
+ * so a partial override never blanks an existing value.
+ */
 function mergeConfig(base: XuanConfig, overrides?: Partial<XuanConfig>): XuanConfig {
   if (overrides === undefined) return base;
   const merged: XuanConfig = { ...base };
@@ -73,6 +94,10 @@ function mergeConfig(base: XuanConfig, overrides?: Partial<XuanConfig>): XuanCon
   return merged;
 }
 
+/**
+ * Build the agent: resolve config, wire collaborators (each overridable via
+ * `options` for dependency injection in tests), and return the SDK surface.
+ */
 export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
   const config = mergeConfig(resolveConfig(), options.config);
   const logger = options.logger ?? createLogger(config.logLevel);
@@ -80,7 +105,8 @@ export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
   const promptManager = new PromptManager();
   const safetyGuard = new SafetyGuard();
 
-  // 惰性创建：`config doctor` 不需要 Provider，也避免 mock 之外提前要求 API key。
+  // Lazily create the provider: `config doctor` needs no provider, and this
+  // avoids requiring an API key up front unless a call actually invokes the LLM.
   let provider = options.provider;
   const getProvider = (): LlmProvider => {
     provider ??= ProviderFactory.create(config);
@@ -88,6 +114,8 @@ export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
   };
 
   const ragEngine = options.ragEngine ?? new RagEngine({ knowledgeDir: config.paths.knowledgeDir });
+  // Session and profile stores are likewise created on first use, so commands
+  // that never touch them leave the filesystem alone.
   let conversationStore = options.conversationStore;
   const getConversationStore = (): ConversationStore => {
     conversationStore ??= new ConversationStore(config.paths.sessionsDir);
@@ -99,7 +127,10 @@ export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
     return profileStore;
   };
 
-  /** 进阶解读的 RAG 引用：用日主 + 十神拼检索词（通俗模式不检索）。 */
+  /**
+   * Advanced-mode RAG citations: build the query from the day master plus the
+   * chart's Ten Gods (十神) as a heuristic term set. Beginner mode does not search.
+   */
   async function searchChartCitations(chart: BaziChart, topK = 5): Promise<RagCitation[]> {
     const terms = [chart.dayMaster, ...chart.tenGods.map((relation) => relation.tenGod)];
     const query = [...new Set(terms)].filter(Boolean).join(" ");
@@ -109,6 +140,10 @@ export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
 
   logger.debug("XuanAgent 已创建", { provider: config.provider, model: config.model });
 
+  /**
+   * Assemble the standard `AnalysisResult` envelope shared by analyze and
+   * follow-up, stamping id, timestamp and provider metadata.
+   */
   function toResult(
     llm: LlmProvider,
     chart: BaziChart,
@@ -131,6 +166,7 @@ export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
       structured: chart,
       content: {
         summary: outputText,
+        // V1 emits a single summary string; sectioned output is not produced yet.
         sections: [],
         followupQuestions: [],
         boundaryNotice: BOUNDARY_NOTICE,
@@ -147,14 +183,18 @@ export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
   }
 
   return {
+    /** Non-secret config summary for `xuan config doctor` (FR-LLM-01). */
     async getConfigSummary(): Promise<ConfigSummary> {
       return getConfigSummary(config);
     },
 
+    /** Validate → calculate → interpret → audit → persist, returning the result. */
     async analyzeBazi(
       input: BirthInputRequest,
       request: Partial<AnalysisRequest> = {},
     ): Promise<AnalysisResult<BaziChart>> {
+      // Program-path callers must pass complete input; gaps are an error here,
+      // not a clarification prompt (requirements.md "输入处理").
       const parsed = BirthInputSchema.safeParse(input);
       if (!parsed.success) {
         throw new XuanError({
@@ -169,7 +209,10 @@ export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
       const chart = calculator.calculate(parsed.data);
       const mode = request.mode ?? parsed.data.mode ?? "advanced";
       const llm = getProvider();
-      // 进阶模式带 RAG 引用，通俗模式不检索（FR-BAZI-04）。
+      // Advanced mode attaches RAG citations; beginner mode skips retrieval.
+      // Authority is FR-RAG-02 rule 2 ("通俗模式只给简短来源；进阶模式可展开原文与释义").
+      // NOTE: FR-BAZI-04 still lists "RAG 引用" under 明确不做（V1）— that line predates RAG
+      // landing and is now stale; FR-RAG-02 governs.
       const citations = mode !== "beginner" ? await searchChartCitations(chart) : [];
       const { input: promptInput, version } = promptManager.buildBaziPrompt(chart, mode, citations);
 
@@ -179,7 +222,8 @@ export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
       const sessionId = request.sessionId ?? `sess-${randomUUID()}`;
       const durationMs = Date.now() - started;
 
-      // 自动写入会话，追问依赖它（FR-MEM-01）；`temporary: true` 跳过持久化（隐私模式）。
+      // Auto-persist the session — follow-ups depend on it (FR-MEM-01).
+      // `temporary: true` is the privacy escape hatch that skips persistence (ADR-0008).
       if (request.temporary !== true) {
         await getConversationStore().save({
           sessionId,
@@ -209,6 +253,7 @@ export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
       );
     },
 
+    /** Reuse the stored chart and answer a follow-up question (FR-BAZI-05). */
     async askFollowup(input: FollowupInput): Promise<AnalysisResult<BaziChart>> {
       const store = getConversationStore();
       const state =
@@ -224,10 +269,11 @@ export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
         });
       }
 
+      // Same-chart reuse: never re-calculate within a session (FR-BAZI-05).
       const chart = state.chart;
       const mode = input.mode ?? state.mode ?? "advanced";
 
-      // RAG 按需：仅当追问能命中术语 / 依据时引用（FR-BAZI-05）。
+      // RAG is on-demand: only cited when the follow-up hits terminology/evidence (FR-BAZI-05).
       const ragResult = await ragEngine.search({ query: input.question, topK: 3 });
       const citations = ragResult.citations;
 
@@ -271,16 +317,21 @@ export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
       );
     },
 
+    /** Direct RAG search passthrough (FR-RAG-02). */
     async searchRag(options: RagSearchOptions): Promise<RagSearchResult> {
       return ragEngine.search(options);
     },
 
+    /** Load the saved profile for `userId`, or null when absent (FR-MEM-02). */
     async getProfile(userId = "default"): Promise<UserProfile | null> {
       const found = await getProfileStore().load(userId);
       return found ?? null;
     },
 
+    /** Persist a profile; refuses unless `confirm` is true (FR-MEM-02). */
     async saveProfile(input: ProfileInput, options: SaveProfileOptions = {}): Promise<UserProfile> {
+      // Explicit user confirmation is required before writing a profile
+      // (FR-MEM-02 / ADR-0008).
       if (options.confirm !== true) {
         throw new XuanError({
           code: "PROFILE_PERMISSION_REQUIRED",
@@ -323,7 +374,9 @@ export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
       return profile;
     },
 
+    /** Delete a profile; refuses unless `confirm` is true (FR-MEM-02). */
     async deleteProfile(userId = "default", options: SaveProfileOptions = {}): Promise<void> {
+      // Deletion is likewise gated on explicit confirmation (FR-MEM-02 / ADR-0008).
       if (options.confirm !== true) {
         throw new XuanError({
           code: "PROFILE_PERMISSION_REQUIRED",

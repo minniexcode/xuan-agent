@@ -10,6 +10,9 @@ interface RagOptions {
   json?: boolean;
 }
 
+/**
+ * Register `xuan rag search` (technical-design.md §19).
+ */
 export function registerRagCommand(program: Command): void {
   const rag = program.command("rag").description("知识库检索与引用");
 
@@ -22,6 +25,7 @@ export function registerRagCommand(program: Command): void {
     .option("--json", "JSON 输出")
     .action(async (options: RagOptions) => {
       const agent = createXuanAgent();
+      // V1 only knows the `bazi` skill; any other --skill value is ignored.
       const domain = options.skill === "bazi" ? "bazi" : undefined;
       const topK = Number.parseInt(options.topK ?? "5", 10);
       const result = await agent.searchRag({ query: options.query, topK, domain });

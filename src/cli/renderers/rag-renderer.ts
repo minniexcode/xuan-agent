@@ -1,5 +1,6 @@
 import type { RagSearchResult } from "../../rag/types.js";
 
+/** Render citation-backed RAG search results as Chinese text; serves `xuan rag search` (FR-RAG-02). */
 export function renderRagResult(result: RagSearchResult): string {
   const lines = ["知识库检索", "", `检索词：${result.query}`, `检索方式：关键词`];
 

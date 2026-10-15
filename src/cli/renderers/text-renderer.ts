@@ -1,7 +1,9 @@
 import type { ConfigDoctorReport } from "../../config/index.js";
 
+/** Render a boolean as 开启/关闭 for the config report. */
 const onOff = (value: boolean): string => (value ? "开启" : "关闭");
 
+/** Render the config health report as Chinese text; serves `xuan config doctor`. */
 export function renderConfigDoctor(report: ConfigDoctorReport): string {
   const { summary } = report;
   const lines: string[] = [

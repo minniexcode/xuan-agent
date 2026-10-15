@@ -31,6 +31,12 @@ interface ProfileDeleteOptions {
   json?: boolean;
 }
 
+/**
+ * Register `xuan profile view|save|delete` (technical-design.md §19).
+ *
+ * `save` and `delete` require `--confirm`; otherwise the agent throws
+ * `PROFILE_PERMISSION_REQUIRED` (§19.3 user confirmation).
+ */
 export function registerProfileCommand(program: Command): void {
   const profile = program.command("profile").description("用户档案管理");
 
@@ -66,6 +72,8 @@ export function registerProfileCommand(program: Command): void {
     .option("--confirm", "确认写入档案")
     .option("--json", "JSON 输出")
     .action(async (options: ProfileSaveOptions) => {
+      // Commander yields strings for optional flags, so the raw object is cast
+      // to the request type; the agent validates and narrows it.
       const birth = {
         date: options.date,
         time: options.time,
@@ -86,6 +94,7 @@ export function registerProfileCommand(program: Command): void {
       };
 
       const agent = createXuanAgent();
+      // Persisting a profile requires --confirm (§19.3).
       const saved = await agent.saveProfile(input, { confirm: options.confirm === true });
       const output = options.json ? renderJson(saved) : renderProfile(saved);
       process.stdout.write(`${output}\n`);
@@ -100,6 +109,7 @@ export function registerProfileCommand(program: Command): void {
     .action(async (options: ProfileDeleteOptions) => {
       const userId = options.user ?? "default";
       const agent = createXuanAgent();
+      // Deleting a profile requires --confirm (§19.3).
       await agent.deleteProfile(userId, { confirm: options.confirm === true });
       const message = `已删除档案：${userId}`;
       process.stdout.write(`${options.json ? renderJson({ deleted: userId }) : `${message}\n`}\n`);

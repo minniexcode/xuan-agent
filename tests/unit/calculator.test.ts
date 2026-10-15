@@ -3,6 +3,8 @@ import { Tyme4tsBaziCalculator } from "../../src/calculators/index.js";
 import { BirthInputSchema } from "../../src/schemas/index.js";
 
 const calculator = new Tyme4tsBaziCalculator();
+// Shared valid fixture reused by most cases; parsed through the schema so it is
+// a genuine BirthInput rather than a hand-rolled object.
 const base = BirthInputSchema.parse({
   date: "1995-03-12",
   time: "08:30",
@@ -10,6 +12,8 @@ const base = BirthInputSchema.parse({
   calendar: "solar",
 });
 
+// Unit tests for FR-BAZI-02 (deterministic chart calculation): pillar mapping,
+// hidden stems / naYin, ten-god derivation, and the defensive "unknown input" paths.
 describe("Tyme4tsBaziCalculator", () => {
   it("排盘四柱与日主", () => {
     const chart = calculator.calculate(base);
@@ -35,6 +39,8 @@ describe("Tyme4tsBaziCalculator", () => {
     expect(tenGods.hour).toBe("食神");
   });
 
+  // FR-BAZI-01 defensive handling: a missing hour yields no hour pillar and a
+  // limitation note, rather than a guessed pillar.
   it("时辰未知时不生成时柱并标注限制", () => {
     const chart = calculator.calculate(
       BirthInputSchema.parse({
@@ -49,6 +55,8 @@ describe("Tyme4tsBaziCalculator", () => {
     expect(chart.limitations.some((l) => l.includes("时辰未知"))).toBe(true);
   });
 
+  // FR-BAZI-01 defensive handling: unspecified gender cannot determine luck-pillar
+  // direction, so no luck pillars are produced and the limitation is recorded.
   it("性别未提供时不排大运", () => {
     const chart = calculator.calculate(
       BirthInputSchema.parse({
@@ -62,6 +70,8 @@ describe("Tyme4tsBaziCalculator", () => {
     expect(chart.limitations.some((l) => l.includes("性别未提供"))).toBe(true);
   });
 
+  // FR-BAZI-02 rule 6 / ADR-0010: a birth time in 23:00–23:59 must record which
+  // late 子 hour school was used (here: next-day day pillar).
   it("晚子时标注流派", () => {
     const chart = calculator.calculate(
       BirthInputSchema.parse({

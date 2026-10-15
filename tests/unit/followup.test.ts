@@ -7,10 +7,14 @@ import { createXuanAgent } from "../../src/index.js";
 import { createLogger } from "../../src/logging/index.js";
 import { RagEngine } from "../../src/rag/index.js";
 
+// Isolated temp root: sessions and the RAG seed are written here, so the test
+// never touches real user data or the shipped knowledge base.
 const root = mkdtempSync(join(tmpdir(), "xuan-followup-"));
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
 const sessionsDir = join(root, "sessions");
+// A local one-entry seed built per-file, so follow-up behaviour is self-contained
+// and does not depend on whatever the packaged knowledge base happens to contain.
 const seedDir = join(root, "seed");
 mkdirSync(seedDir, { recursive: true });
 writeFileSync(
@@ -37,6 +41,7 @@ writeFileSync(
 
 const silent = createLogger("silent");
 
+// Injects the temp-backed store and seed so each test is fully isolated.
 function makeAgent() {
   return createXuanAgent({
     config: { provider: "mock" },
@@ -46,7 +51,11 @@ function makeAgent() {
   });
 }
 
+// Follow-up behaviour for FR-BAZI-05 (follow-up and same-chart reuse).
 describe("XuanAgent 追问（mock Provider）", () => {
+  // The only test that proves same-chart reuse: analyze persists a session, then
+  // ask must return a `structured` chart identical to the analyze result's -- the
+  // chart is reused, never recalculated. (FR-BAZI-05 rule 1 / FR-MEM-01 rule 1.)
   it("analyze 自动写入会话，ask 复用同一份盘面", async () => {
     const agent = makeAgent();
     const analyzed = await agent.analyzeBazi({
@@ -66,6 +75,8 @@ describe("XuanAgent 追问（mock Provider）", () => {
     expect(followup.structured.pillars.year.ganZhi).toBe(analyzed.structured.pillars.year.ganZhi);
   });
 
+  // FR-BAZI-05 rule 2: RAG is on-demand -- term questions retrieve, style-only
+  // requests ("say it plainly") do not.
   it("术语追问触发 RAG 引用，风格类追问不触发", async () => {
     const agent = makeAgent();
     const analyzed = await agent.analyzeBazi({
@@ -84,6 +95,7 @@ describe("XuanAgent 追问（mock Provider）", () => {
     expect(style.citations).toEqual([]);
   });
 
+  // FR-BAZI-05 CLI rule: with no session id, the most recent session is continued.
   it("不传 sessionId 时续最近一次会话", async () => {
     const agent = makeAgent();
     const analyzed = await agent.analyzeBazi({
@@ -97,6 +109,8 @@ describe("XuanAgent 追问（mock Provider）", () => {
     expect(followup.sessionId).toBe(analyzed.sessionId);
   });
 
+  // FR-BAZI-05 rule 5: no session context means an explicit error, not a silent
+  // fresh chart. Uses a separate empty store so no session exists to fall back to.
   it("找不到会话上下文时抛 STORAGE_ERROR", async () => {
     const empty = createXuanAgent({
       config: { provider: "mock" },

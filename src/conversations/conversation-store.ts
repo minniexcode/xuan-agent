@@ -5,22 +5,30 @@ import { type ConversationState, ConversationStateSchema } from "./conversation-
 
 const LATEST_FILE = "latest.json";
 
-/** 会话状态本地 JSON 存储：`<sessionsDir>/<sessionId>.json` + 最近指针。 */
+/**
+ * Local JSON storage for conversation state: `<sessionsDir>/<sessionId>.json` plus a "latest" pointer.
+ * The persisted state carries the frozen `chart`, which is what lets a follow-up reuse the same chart without re-calculation.
+ */
 export class ConversationStore {
   constructor(private readonly dir: string) {}
 
+  /** File path for a single session's state. */
   private pathFor(sessionId: string): string {
     return join(this.dir, `${sessionId}.json`);
   }
 
+  /** Path of the pointer file recording the most recent session. */
   private latestPath(): string {
     return join(this.dir, LATEST_FILE);
   }
 
+  /** Validate and persist a session, then update the latest-session pointer. */
   async save(state: ConversationState): Promise<void> {
     const parsed = ConversationStateSchema.parse(state);
     try {
+      // Atomic temp-file + rename (via writeJsonAtomic) avoids a half-written file on interruption (technical-design.md §26.1).
       writeJsonAtomic(this.pathFor(parsed.sessionId), parsed);
+      // The pointer is what lets `ask` (with no explicit sessionId) resume the most recent session.
       writeJsonAtomic(this.latestPath(), { sessionId: parsed.sessionId });
     } catch (err) {
       throw XuanError.from(err, {
@@ -32,6 +40,7 @@ export class ConversationStore {
     }
   }
 
+  /** Load a session by id; returns undefined when the file is missing. */
   async load(sessionId: string): Promise<ConversationState | undefined> {
     try {
       const raw = readJson<unknown>(this.pathFor(sessionId));
@@ -47,7 +56,7 @@ export class ConversationStore {
     }
   }
 
-  /** 读取最近一次会话；无指针或文件缺失时返回 undefined。 */
+  /** Load the most recent session; returns undefined when there is no pointer or the file is missing. */
   async loadLatest(): Promise<ConversationState | undefined> {
     try {
       const pointer = readJson<{ sessionId?: string }>(this.latestPath());
@@ -63,7 +72,7 @@ export class ConversationStore {
     }
   }
 
-  /** 不传 sessionId 时清空整个目录（FR-MEM-01 的 `xuan session clear`）。 */
+  /** Clear one session, or the whole directory when `sessionId` is omitted (FR-MEM-01's `xuan session clear`). */
   async clear(sessionId?: string): Promise<void> {
     try {
       if (sessionId !== undefined) {

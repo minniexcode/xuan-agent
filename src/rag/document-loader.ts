@@ -2,12 +2,14 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { CopyrightStatus, KnowledgeChunk, KnowledgeDomain } from "./types.js";
 
+/** Domains accepted from frontmatter; anything else falls back to `general`. */
 const DOMAINS = new Set<KnowledgeDomain>(["bazi", "face", "palm", "general"]);
+/** Copyright statuses accepted from frontmatter; anything else falls back to `unknown`. */
 const COPYRIGHT = new Set<CopyrightStatus>(["usable", "unknown", "restricted"]);
 
 /**
- * 极简 frontmatter 解析（零依赖）：`---` 分隔的键值行。
- * 不解析嵌套 YAML，只支持 seed 用到的平铺键值。
+ * Minimal, zero-dependency frontmatter parser: `---`-delimited key/value lines.
+ * Deliberately does not parse nested YAML — only the flat keys the seed uses.
  */
 export function parseFrontmatter(content: string): {
   meta: Record<string, string>;
@@ -29,6 +31,7 @@ export function parseFrontmatter(content: string): {
   return { meta, body: lines.slice(i + 1).join("\n") };
 }
 
+/** Parse a frontmatter value (`[a, b]` or `a, b`) into a trimmed, non-empty tag list. */
 function parseTags(value: string): string[] {
   const trimmed = value.trim();
   const inner = trimmed.startsWith("[") && trimmed.endsWith("]") ? trimmed.slice(1, -1) : trimmed;
@@ -38,7 +41,7 @@ function parseTags(value: string): string[] {
     .filter(Boolean);
 }
 
-/** 把正文拆成「原文」与「现代释义」两段（按 `## ` 标题分组，标题名宽松匹配）。 */
+/** Split the body into original text (原文) and interpretation (释义) by loose `## ` heading match. */
 function splitSections(body: string): { text: string; interpretation: string } {
   const buckets = { text: [] as string[], interpretation: [] as string[] };
   let current: keyof typeof buckets | null = null;
@@ -59,7 +62,7 @@ function splitSections(body: string): { text: string; interpretation: string } {
   };
 }
 
-/** 解析单篇知识文档（markdown + frontmatter）。documentId 通常为文件名去扩展。 */
+/** Parse one knowledge document (markdown + frontmatter). `documentId` is normally the filename without extension. */
 export function parseKnowledgeDocument(content: string, documentId: string): KnowledgeChunk {
   const { meta, body } = parseFrontmatter(content);
   const { text, interpretation } = splitSections(body);
@@ -81,7 +84,10 @@ export function parseKnowledgeDocument(content: string, documentId: string): Kno
   return chunk;
 }
 
-/** 读取目录下全部 markdown 文档。目录不存在时返回空数组（本地知识库可选）。 */
+/**
+ * Load every markdown document in a directory.
+ * A missing directory returns `[]` rather than throwing — the local knowledge base is optional, not required.
+ */
 export function loadKnowledgeDir(dir: string): KnowledgeChunk[] {
   let entries: string[];
   try {

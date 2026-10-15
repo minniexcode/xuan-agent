@@ -6,9 +6,12 @@ import { Tyme4tsBaziCalculator } from "../../src/calculators/index.js";
 import { type BirthInput, BirthInputSchema } from "../../src/schemas/index.js";
 
 /**
- * 回归基线：防回归，不用于证明正确性。
- * 正确性已由三实现交叉对拍 + 权威节气时刻核对确认（见 docs/product-architecture.md §11）。
- * 现在经 `BaziCalculator` 断言，不再直接依赖 tyme4ts 原始对象。
+ * Regression baseline: guards against regressions, NOT proof of correctness.
+ * Correctness was established by cross-checking three independent implementations
+ * against authoritative solar-term times (see docs/product-architecture.md §11).
+ * The assertions run through the `BaziCalculator` interface rather than calling
+ * tyme4ts directly, so swapping the underlying library behind that interface
+ * cannot silently change (or break) these expectations.
  */
 
 interface BaselineExpect {
@@ -40,9 +43,12 @@ interface Baseline {
   cases: BaselineCase[];
 }
 
+// Load the frozen expectations from the data file next to this test (not code).
 const here = dirname(fileURLToPath(import.meta.url));
 const baseline = JSON.parse(readFileSync(join(here, "bazi-baseline.json"), "utf8")) as Baseline;
 
+// Translate a raw baseline case into the schema-validated BirthInput the calculator
+// expects. A negative lunar month encodes a leap month (e.g. -4 = leap 4th month).
 function toBirthInput(testCase: BaselineCase): BirthInput {
   if (testCase.input.calendar === "lunar") {
     const [y, m, d] = testCase.input.lunar as [number, number, number];
@@ -63,9 +69,17 @@ function toBirthInput(testCase: BaselineCase): BirthInput {
   });
 }
 
+// Concrete implementation behind the BaziCalculator interface.
 const calculator = new Tyme4tsBaziCalculator();
 
+/**
+ * Baseline regression suite for FR-BAZI-02 (deterministic chart calculation).
+ * The 21 cases are designed to span the tricky boundaries: solar and lunar input,
+ * leap month, solar-term boundaries, the late 子 hour, and both luck-pillar
+ * directions (forward/reverse). Guards against silent changes to chart output.
+ */
 describe("八字排盘回归基线（经 BaziCalculator）", () => {
+  // Sanity-check the fixture file itself before trusting it as a baseline.
   it("基线文件结构完整", () => {
     expect(baseline.cases).toHaveLength(21);
     for (const testCase of baseline.cases) {
@@ -74,6 +88,8 @@ describe("八字排盘回归基线（经 BaziCalculator）", () => {
     }
   });
 
+  // Pins the *coverage* of the baseline: if these hard boundaries are dropped from
+  // the fixture, the regression guard would silently develop blind spots.
   it("覆盖节气边界、晚子时、闰月与大运顺逆", () => {
     const covers = baseline.cases.map((c) => c.covers).join("|");
     for (const keyword of ["节气", "晚子时", "闰月", "大运顺", "大运逆"]) {
@@ -81,6 +97,7 @@ describe("八字排盘回归基线（经 BaziCalculator）", () => {
     }
   });
 
+  // The actual guard: each case must reproduce the frozen expectation exactly.
   it("全部用例与基线一致（防回归）", () => {
     for (const testCase of baseline.cases) {
       const chart = calculator.calculate(toBirthInput(testCase));

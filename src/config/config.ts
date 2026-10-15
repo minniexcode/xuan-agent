@@ -4,9 +4,11 @@ import { type ProviderName, ProviderNameSchema } from "../schemas/index.js";
 import { resolvePaths, type XuanPaths } from "../storage/paths.js";
 import { DEFAULTS } from "./defaults.js";
 
+/** Fully resolved runtime configuration (technical-design.md §16). */
 export interface XuanConfig {
   provider: ProviderName;
   model: string;
+  /** Provider API key; absent when unset (e.g. mock provider or local-only use). */
   apiKey?: string;
   baseUrl: string;
   temperature: number;
@@ -17,12 +19,13 @@ export interface XuanConfig {
   paths: XuanPaths;
 }
 
-/** 脱敏配置摘要：只报告 key 是否存在，绝不返回值。 */
+/** Redacted config summary: reports only whether the key is present, never its value. */
 export interface ConfigSummary {
   provider: {
     name: ProviderName;
     model: string;
     baseUrl: string;
+    /** Presence flag only — the key value is never included. */
     apiKeyPresent: boolean;
   };
   temperature: number;
@@ -30,20 +33,27 @@ export interface ConfigSummary {
   streaming: boolean;
   logLevel: LogLevel;
   paths: XuanPaths;
+  /** Node.js runtime version. */
   node: string;
 }
 
+/** Parse a boolean-ish env string; empty/undefined falls back, otherwise truthy tokens win. */
 function parseBoolean(value: string | undefined, fallback: boolean): boolean {
   if (value === undefined || value.trim() === "") return fallback;
   return /^(1|true|yes|on)$/i.test(value.trim());
 }
 
+/** Parse a numeric env string; empty/undefined or non-finite values fall back. */
 function parseNumber(value: string | undefined, fallback: number): number {
   if (value === undefined || value.trim() === "") return fallback;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+/**
+ * Resolve config from the environment (technical-design.md §16.1).
+ * `env` is a parameter (defaulting to process.env) specifically so tests can inject a fake environment.
+ */
 export function resolveConfig(env: NodeJS.ProcessEnv = process.env): XuanConfig {
   const rawProvider = env.XUAN_PROVIDER?.trim() || DEFAULTS.provider;
   const parsedProvider = ProviderNameSchema.safeParse(rawProvider);
@@ -71,10 +81,12 @@ export function resolveConfig(env: NodeJS.ProcessEnv = process.env): XuanConfig 
   };
 
   const apiKey = env.XUAN_API_KEY?.trim();
+  // Only attach the key when it is genuinely set, so `apiKey` stays absent otherwise.
   if (apiKey !== undefined && apiKey !== "") config.apiKey = apiKey;
   return config;
 }
 
+/** Build the redacted summary; must never include the API key, only its presence. */
 export function getConfigSummary(config: XuanConfig): ConfigSummary {
   return {
     provider: {
@@ -92,6 +104,7 @@ export function getConfigSummary(config: XuanConfig): ConfigSummary {
   };
 }
 
+/** Result of the config health check (xuan config doctor). */
 export interface ConfigDoctorReport {
   ok: boolean;
   summary: ConfigSummary;
@@ -100,8 +113,8 @@ export interface ConfigDoctorReport {
 }
 
 /**
- * 配置健康检查。缺 API key 只算警告（本地命令仍可用），
- * 因此默认情况下退出码为 0，便于脚本与 smoke test 使用。
+ * Config health check. A missing API key is only a warning (local commands still work),
+ * so the default exit code stays 0 for scripts and smoke tests.
  */
 export function diagnoseConfig(config: XuanConfig): ConfigDoctorReport {
   const warnings: string[] = [];

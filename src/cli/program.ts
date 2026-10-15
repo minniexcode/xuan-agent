@@ -7,7 +7,12 @@ import { registerProviderCommand } from "./commands/provider.js";
 import { registerRagCommand } from "./commands/rag.js";
 import { registerSessionCommand } from "./commands/session.js";
 
-/** 构建 CLI 程序。不产生副作用，便于测试直接断言。 */
+/**
+ * Build the `xuan` CLI program (technical-design.md §19) without side effects.
+ *
+ * Deliberately side-effect free (no `parseAsync` here) so tests can call
+ * `parseAsync` directly and assert on output without spawning a subprocess.
+ */
 export function buildProgram(): Command {
   const program = new Command();
 

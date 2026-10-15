@@ -3,17 +3,20 @@ import { XuanError } from "../errors/index.js";
 import { type UserProfile, UserProfileSchema } from "../schemas/profile.js";
 import { readJson, removeFile, writeJsonAtomic } from "../storage/json-store.js";
 
-/** 用户档案本地 JSON 存储：`<profilesDir>/<userId>.json`（FR-MEM-02）。 */
+/** Local JSON storage for user profiles: `<profilesDir>/<userId>.json` (FR-MEM-02). */
 export class ProfileStore {
   constructor(private readonly dir: string) {}
 
+  /** File path for a single profile. */
   private pathFor(userId: string): string {
     return join(this.dir, `${userId}.json`);
   }
 
+  /** Validate and persist a profile; callers must obtain explicit user confirmation first (FR-MEM-02). */
   async save(profile: UserProfile): Promise<void> {
     const parsed = UserProfileSchema.parse(profile);
     try {
+      // Atomic temp-file + rename (technical-design.md §26.1).
       writeJsonAtomic(this.pathFor(parsed.userId), parsed);
     } catch (err) {
       throw XuanError.from(err, {
@@ -25,6 +28,7 @@ export class ProfileStore {
     }
   }
 
+  /** Load a profile by id; returns undefined when the file is missing. */
   async load(userId: string): Promise<UserProfile | undefined> {
     try {
       const raw = readJson<unknown>(this.pathFor(userId));
@@ -40,6 +44,7 @@ export class ProfileStore {
     }
   }
 
+  /** Delete a profile; requires explicit user confirmation, unlike conversation state (FR-MEM-02). */
   async delete(userId: string): Promise<void> {
     try {
       removeFile(this.pathFor(userId));

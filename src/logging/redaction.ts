@@ -1,20 +1,25 @@
+/** Replacement token used for every redacted secret value. */
 export const REDACTED = "***";
 
-/** 敏感字段名（大小写不敏感）。 */
+/** Sensitive field-name pattern (case-insensitive). */
 const SECRET_KEY_PATTERN = /(api[_-]?key|apikey|secret|token|authorization|password|credential)/i;
 
+/** True when a field name looks like a secret and its value should be redacted. */
 export function isSecretKey(key: string): boolean {
   return SECRET_KEY_PATTERN.test(key);
 }
 
-/** 值本身不返回任何内容，只返回占位符——不泄露长度或前后缀。 */
+/**
+ * Return only a placeholder for a value — deliberately leaking neither its length
+ * nor any prefix/suffix.
+ */
 export function redact(value: unknown): string {
   return value === undefined || value === null || value === "" ? "" : REDACTED;
 }
 
 /**
- * 递归地把敏感字段替换为占位符，用于日志与普通输出。
- * 见 product-architecture.md §8.3 与 §10。
+ * Recursively replace sensitive fields with the placeholder, for logs and ordinary output.
+ * See product-architecture.md §8.3 and §10.
  */
 export function redactObject<T>(input: T): T {
   if (Array.isArray(input)) {

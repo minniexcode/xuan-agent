@@ -1,19 +1,20 @@
 import type { LogLevel } from "../logging/index.js";
 import type { ProviderName } from "../schemas/index.js";
 
+/** Shape of the built-in default configuration. */
 export interface XuanDefaults {
   provider: ProviderName;
   model: string;
   baseUrl: string;
   temperature: number;
-  /** 推理模型的思考会吃掉大量 token，解读默认给足额度。 */
+  /** A reasoning model's thinking consumes many tokens, so interpretation gets a generous default budget. */
   maxTokens: number;
   enableVision: boolean;
   enableStreaming: boolean;
   logLevel: LogLevel;
 }
 
-/** 包内默认值，配置优先级最低（technical-design.md §16.1）。 */
+/** In-package defaults; lowest priority in config resolution (technical-design.md §16.1). */
 export const DEFAULTS: XuanDefaults = {
   provider: "openai-compatible",
   model: "deepseek-chat",

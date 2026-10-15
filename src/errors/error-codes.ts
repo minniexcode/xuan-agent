@@ -1,3 +1,7 @@
+/**
+ * Exhaustive set of error codes (FR-LLM-01 / technical-design.md §17.6).
+ * The union is exhaustive on purpose so callers can switch on it without a default.
+ */
 export const XUAN_ERROR_CODES = [
   "VALIDATION_ERROR",
   "CALCULATION_ERROR",
@@ -12,7 +16,7 @@ export const XUAN_ERROR_CODES = [
 
 export type XuanErrorCode = (typeof XUAN_ERROR_CODES)[number];
 
-/** 错误发生所在的阶段，用于日志与诊断。 */
+/** The stage where an error occurred, for logging and diagnostics. */
 export type XuanErrorStage =
   | "input"
   | "calculation"

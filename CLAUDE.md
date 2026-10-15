@@ -43,6 +43,55 @@ Entry (src/cli, src/index.ts SDK)
 - **Docs are the source of truth** (Chinese): `docs/prd.md` → `docs/requirements.md` → `docs/product-architecture.md` → `docs/technical-design.md`; rationale in `docs/adr.md`. `GLOSSARY.md` holds canonical vocabulary (avoid its `_Avoid_` words).
 - **`docs/tour/`** is the progressive code-reading guide (01 全局 → 02 基础层 → 03 能力层 → 04 编排与入口 → 05 测试与 Review → 06 Vision 接入点 → 07 版本变更). Start at `docs/tour/README.md`. The layer docs always describe the **current** code; version deltas go in `07-版本变更.md`. The review checklist in `05` lists known spec-vs-implementation gaps — check whether they still hold before acting on them.
 
+## Code conventions
+
+Comments are part of the deliverable, not decoration. **All code comments are written in English** (identifiers, domain terms and Chinese domain vocabulary such as `晚子时` stay as-is). The docs under `docs/` remain Chinese; that split is intentional.
+
+### Comment standard
+
+1. **Every function and method** — exported or not — gets a `/** */` JSDoc block. One line saying what it does; add `@param` / `@returns` only where the name isn't self-explanatory. For a one-line helper, one line is enough.
+2. **Every exported class, interface and type** gets a JSDoc block saying what it represents and where it sits in the layering.
+3. **Interface / type fields** that aren't self-evident get a `/** */` comment (units, allowed values, "V1 only, for the record" style caveats).
+4. **Non-obvious logic** gets an inline `//` comment explaining **why**, not what.
+5. **Traceability is the highest-value comment kind here.** When code implements a requirement or a decision, cite it: `FR-BAZI-02`, `ADR-0010`, `technical-design.md §26.2`. This is what lets a reader check code against spec.
+
+**Avoid**: restating the name (`// return the user id` above `getUserId()`), narrating obvious control flow, recording change history (that belongs in `docs/tour/07-版本变更.md`), or long prose — a JSDoc block is 1–3 lines unless there is a real gotcha to explain.
+
+### Gotcha comments must survive
+
+Several non-obvious behaviours are deliberate and **must stay commented**, or the next reader will "fix" them:
+
+- The `x-opencode-session` header is required by the gateway (400 `MissingSessionID` without it).
+- Reasoning models spend the token budget on `reasoning_content` — hence `max_tokens` 16000 and reading `choices[0].message.content`.
+- RAG's reverse tag matching (`q.includes(tag) || tag.includes(q)`) is deliberate for Chinese terminology queries.
+- `LUCK_STEPS = 8`, the `limitations` list, and 晚子时 = 次日 (ADR-0010) are spec requirements, not arbitrary.
+- `limitations` entries and the safety boundary notice are **product requirements** — never "simplify" them away.
+
+### Example
+
+```ts
+/**
+ * Convert birth input into tyme4ts `SolarTime`.
+ * Falls back to 12:00 when the hour is unknown — only to obtain the day pillar;
+ * the hour pillar is marked missing via `hourKnown`.
+ */
+function resolveSolarTime(input: BirthInput): { solarTime: SolarTime; hourKnown: boolean } {
+  const [year, month, day] = input.date.split("-").map(Number) as [number, number, number];
+
+  // Leap months are encoded as a negative month (-4 = leap 4th month), lunar only.
+  // See requirements.md FR-BAZI-01.
+  const lunarMonth = input.calendar === "lunar" && input.lunarLeapMonth ? -Math.abs(month) : month;
+  ...
+}
+```
+
+### Other conventions
+
+- **Imports** use the `.js` extension even from `.ts` files (ESM + `verbatimModuleSyntax`).
+- **Failures** are raised as `XuanError` with a `code` from `XUAN_ERROR_CODES`, never bare `Error`.
+- **Never log or print** secrets or birth info — use `logging/redaction.ts`.
+- Run `npx biome check --write <files>` before committing; it enforces formatting and import order.
+
 ## Commands
 
 ```bash

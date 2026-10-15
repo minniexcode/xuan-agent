@@ -6,8 +6,10 @@ const STATUS_LABEL: Record<ProviderStatus, string> = {
   mock: "测试",
 };
 
+/** Render a capability flag as a check/dash marker. */
 const onOff = (value: boolean): string => (value ? "✓" : "—");
 
+/** Render the Provider capability table as Chinese text; serves `xuan provider list`. */
 export function renderProviderList(providers: ProviderInfo[]): string {
   const lines = ["Provider 能力表", ""];
   for (const provider of providers) {

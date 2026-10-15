@@ -4,8 +4,12 @@ import { MockProvider } from "./mock.adapter.js";
 import { OpenAiCompatibleProvider } from "./openai-compatible.adapter.js";
 import type { LlmProvider } from "./provider.types.js";
 
-/** 统一创建 LLM Provider，业务层不直接接触具体 adapter（ADR-0006）。 */
+/**
+ * Create the LLM provider for the configured backend. Business layers never touch
+ * a concrete adapter directly (ADR-0006, FR-LLM-02).
+ */
 export const ProviderFactory = {
+  /** Build a provider from `XuanConfig`; throws `XuanError` on missing or invalid config. */
   create(config: XuanConfig): LlmProvider {
     switch (config.provider) {
       case "mock":
@@ -27,6 +31,8 @@ export const ProviderFactory = {
           defaultMaxTokens: config.maxTokens,
         });
       }
+      // The anthropic adapter is a V1 skeleton: throw on purpose rather than silently
+      // degrading to something that looks like a working provider.
       case "anthropic":
         throw new XuanError({
           code: "PROVIDER_CAPABILITY_ERROR",

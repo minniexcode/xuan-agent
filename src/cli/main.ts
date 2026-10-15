@@ -3,6 +3,13 @@ import { loadEnvFile } from "../config/index.js";
 import { XuanError } from "../errors/index.js";
 import { buildProgram } from "./program.js";
 
+/**
+ * CLI entry point: loads `.env` then runs the commander program.
+ *
+ * `loadEnvFile(".env")` runs first so CLI configuration is sourced from `.env`
+ * before any command executes. The catch-all converts any thrown value into a
+ * `XuanError` and sets a non-zero exit code so failures reach the shell.
+ */
 async function main(): Promise<void> {
   loadEnvFile(".env");
 

@@ -7,6 +7,9 @@ interface ProviderListOptions {
   json?: boolean;
 }
 
+/**
+ * Register `xuan provider list` (technical-design.md §19).
+ */
 export function registerProviderCommand(program: Command): void {
   const provider = program.command("provider").description("Provider 能力");
 

@@ -7,6 +7,7 @@ const GENDER_LABEL: Record<Gender, string> = {
   unspecified: "（未指定）",
 };
 
+/** Render a stored user profile as Chinese text; serves `xuan profile view|save`. */
 export function renderProfile(profile: UserProfile): string {
   const birth = profile.birth;
   const time = birth.time ?? (birth.timeUnknown ? "（未知）" : "");

@@ -7,6 +7,11 @@ interface DoctorOptions {
   json?: boolean;
 }
 
+/**
+ * Register `xuan config doctor` (technical-design.md §19).
+ *
+ * The report only indicates whether the API key is present, never its value.
+ */
 export function registerConfigCommand(program: Command): void {
   const config = program.command("config").description("配置相关命令");
 
@@ -18,7 +23,8 @@ export function registerConfigCommand(program: Command): void {
       const report = diagnoseConfig(resolveConfig());
       const output = options.json ? renderJson(report) : renderConfigDoctor(report);
       process.stdout.write(`${output}\n`);
-      // 缺 API key 只算警告，因此默认退出码为 0；有硬错误才非 0。
+      // A missing API key is only a warning, so the default exit code is 0;
+      // only hard errors yield a non-zero code. Scripts and smoke tests rely on this.
       process.exitCode = report.ok ? 0 : 1;
     });
 }
