@@ -370,7 +370,7 @@ V1 应尽量支持本地优先存储，并在文档与界面中明确提醒用�
 | 性别 | 是 | 用于大运顺逆。 |
 | 历法类型 | 是 | `solar` 或 `lunar`。 |
 | 出生地 | 否 | V1 仅作备注，不参与计算。 |
-| 输出模式 | 否 | `beginner`、`advanced` 或 `both`；CLI 默认 `advanced`，V2 前端默认 `beginner`。 |
+| 输出模式 | 否 | `beginner` 或 `advanced`；CLI 默认 `advanced`，V2 前端默认 `beginner`。 |
 
 验收标准：
 
@@ -385,7 +385,7 @@ V1 应尽量支持本地优先存储，并在文档与界面中明确提醒用�
 
 系统必须使用确定性排盘库完成八字计算（V1 采用 `tyme4ts`），产出结构化 `BaziChart`，不得让 LLM 直接生成四柱或推导干支。
 
-排盘字段范围、大运/流年默认步数等完整规格见 [`docs/requirements.md`](requirements.md) 的 FR-BAZI-02。
+排盘字段范围、大运默认步数等完整规格见 [`docs/requirements.md`](requirements.md) 的 FR-BAZI-02；节气/流年移 V2（见 ADR-0012）。
 
 验收标准：
 
@@ -414,7 +414,7 @@ V1 应尽量支持本地优先存储，并在文档与界面中明确提醒用�
 
 验收标准：
 
-- 不得只重复通俗模式，必须展开至少 3 类专业维度（四柱 / 日主月令 / 五行生克 / 十神）。
+- 不得只重复通俗模式，必须展开至少 4 类专业维度（四柱 / 日主月令 / 五行生克 / 十神）。
 - 引用 RAG 内容时（RAG 就绪后），应区分原文、释义和 Agent 总结。
 
 #### FR-BAZI-05 追问与同盘复用
@@ -511,7 +511,7 @@ V1 只做知识库**管线与契约**，seed 用几条示例占位；内容等�
 
 #### FR-LLM-02 Provider 工厂与统一调用
 
-系统应通过 `LangChain` 抽象层和 Factory Pattern 创建不同 Provider 实例。
+系统应通过自研 `LlmProvider` 抽象和 Factory Pattern 创建不同 Provider 实例（见 ADR-0011）。
 
 验收标准：
 
@@ -540,6 +540,8 @@ V1 完成后可按需支持：
 
 #### FR-SKILL-01 V1 Skills 注册
 
+> **V2**：Skill 注册机制移 V2（见 ADR-0012）。V1 以 `XuanAgent` facade 方法提供 bazi/profile/rag。
+
 V1 至少包含以下 Skills：
 
 | Skill | 档位 | 说明 |
@@ -558,6 +560,8 @@ V1 至少包含以下 Skills：
 - Skill 失败时应返回明确错误，不影响其他 Skill 的注册。
 
 #### FR-SKILL-02 后续扩展规则
+
+> **V2**：随 Skill 注册机制一并延后（见 ADR-0012）。
 
 后续新增六爻、紫微、奇门、梅花等模块时，应通过新 Skill 扩展。
 

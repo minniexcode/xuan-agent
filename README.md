@@ -4,7 +4,7 @@
 
 玄枢用确定性算法完成排盘与结构化计算，再由 LLM 做中性、可解释、可追问的解读。它不试图把玄学包装成确定性预测系统，而是把排盘、术语解释、古籍引用、个人档案和连续对话整合成一个可追溯、有节制的工具。
 
-**项目状态：V1 功能已实现（Milestone 1–5），处于 npm 预发布准备阶段。** 八字排盘、通俗/进阶解读、同盘追问、RAG 检索、会话记忆与用户档案均已落地；相术与多 Provider 对比为 V2。
+**项目状态：V1 主链路可运行（个人 CLI 排盘 + 解读 + 同盘追问），验收范围见 [ADR-0012](docs/adr.md)。** 结构化 sections 已落地；节气/流年、Skill 注册、CLI 交互与档案回填为 V2；相术与多 Provider 对比亦为 V2。
 
 ## 它是什么，不是什么
 
@@ -33,13 +33,13 @@
 V1 聚焦八字命理：
 
 - 出生信息采集与确定性排盘
-- 通俗模式 / 进阶模式两层结构化解读
+- 通俗模式 / 进阶模式结构化 section 解读
 - 围绕排盘结果的连续追问与同盘复用
 - 会话记忆与用户档案记忆
 - RAG 古籍引用检索
 - 多 Provider 可切换（V1 默认单一 Provider）
 
-V1 明确不做：相术图像分析、多 Provider 对比、HTTP API 交付（仅保留骨架）、前端页面、多用户账号与支付体系。
+V1 明确不做：相术图像分析、多 Provider 对比、节气/流年扩展、Skill 注册机制、CLI 交互追问、HTTP API 交付（仅保留骨架）、前端页面、多用户账号与支付体系。
 
 上述能力中的相术（面相 / 手相）与多 Provider 对比为 V2 首要扩展方向。
 
@@ -47,7 +47,7 @@ V1 明确不做：相术图像分析、多 Provider 对比、HTTP API 交付（�
 
 | 领域 | 选型 |
 | --- | --- |
-| 语言 / 运行时 | TypeScript-first，Node.js（`"type": "module"`，`>= 20`） |
+| 语言 / 运行时 | TypeScript-first，Node.js（`"type": "module"`，`>= 22.12`） |
 | 交付形态 | 单一 npm 包 `xuan-agent`：CLI 命令 `xuan` + SDK 入口 `xuan-agent`，无 monorepo |
 | Agent 编排 | 自研 `XuanAgent` 线性流程（V1 不引入 LangGraph.js，见 [ADR-0011](docs/adr.md)） |
 | LLM 抽象 | 自研 `LlmProvider` + `ProviderFactory`（openai-compatible 走 `fetch`） |
@@ -139,7 +139,7 @@ npm run pack:dry       # npm pack --dry-run
 
 ## 隐私与安全
 
-- **默认不持久化**出生信息、出生地、图像与完整对话。
+- **默认不写入长期档案**；短期会话（含盘面输入）本地自动保存、可清理（见 [ADR-0012](docs/adr.md)）。
 - **日志脱敏**：不记录完整 API key、出生信息、图像内容或未脱敏档案。
 - **`SafetyGuard`** 负责输入检查、Prompt 注入防御、输出后处理与高风险降级。
 - **禁止输出**：吉凶断言、宿命论标签、医疗 / 法律 / 投资 / 婚育建议、图像身份识别、敏感属性推断、相貌价值评判、伪造排盘或伪造 RAG 来源。
