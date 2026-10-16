@@ -46,13 +46,16 @@ export function renderAnalysisResult(result: AnalysisResult<BaziChart>): string 
     `解读（${result.provider.model}）：`,
   ];
 
-  // Structured output renders each section; a plain answer falls back to `summary`.
-  if (result.content.sections.length > 0) {
-    for (const section of result.content.sections) {
-      lines.push("", `### ${section.title}`, section.body.trim() || "（空）");
-    }
-  } else {
-    lines.push(result.content.summary.trim() || "（空）");
+  // Summary and sections render independently: a leading summary must not be dropped
+  // when the answer also has sections (it is preserved in the JSON either way).
+  const summary = result.content.summary.trim();
+  if (summary !== "") {
+    lines.push(summary);
+  } else if (result.content.sections.length === 0) {
+    lines.push("（空）");
+  }
+  for (const section of result.content.sections) {
+    lines.push("", `### ${section.title}`, section.body.trim() || "（空）");
   }
 
   if (result.content.followupQuestions.length > 0) {

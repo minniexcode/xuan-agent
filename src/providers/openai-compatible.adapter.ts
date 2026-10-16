@@ -118,7 +118,9 @@ export class OpenAiCompatibleProvider implements LlmProvider {
       });
     }
     // Read only the answer content — `reasoning_content` is deliberately ignored.
-    const text = data.choices?.[0]?.message?.content ?? "";
+    // A null / non-string `content` is treated as an empty answer, not a crash.
+    const raw = data.choices?.[0]?.message?.content;
+    const text = typeof raw === "string" ? raw : "";
     if (text.trim() === "") {
       throw new XuanError({
         code: "LLM_ERROR",

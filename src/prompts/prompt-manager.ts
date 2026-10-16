@@ -31,7 +31,7 @@ function sectionsInstruction(mode: OutputMode): string {
   const sections =
     mode === "beginner"
       ? "关键词、整体摘要、观察点（性格 / 行为 / 沟通 / 关系 / 成长中择要）"
-      : "四柱结构、日主与月令、五行分布与生克、十神组合、大运与流年观察";
+      : "四柱结构、日主与月令、五行分布与生克、十神组合、大运观察";
   return [
     "请用 Markdown 二级标题（`## 标题`）分段输出解读，标题用中文，依次覆盖：",
     `  ${sections}。`,
