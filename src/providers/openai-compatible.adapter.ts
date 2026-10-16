@@ -105,10 +105,28 @@ export class OpenAiCompatibleProvider implements LlmProvider {
       });
     }
 
-    const data = (await response.json()) as {
-      choices?: { message?: { content?: string } }[];
-    };
+    let data: { choices?: { message?: { content?: string } }[] };
+    try {
+      data = (await response.json()) as { choices?: { message?: { content?: string } }[] };
+    } catch (err) {
+      // A 2xx body that is not JSON is a protocol failure, not a valid (empty) answer.
+      throw XuanError.from(err, {
+        code: "LLM_ERROR",
+        message: "Provider 响应解析失败",
+        stage: "llm",
+        recoverable: true,
+      });
+    }
     // Read only the answer content — `reasoning_content` is deliberately ignored.
-    return { text: data.choices?.[0]?.message?.content ?? "" };
+    const text = data.choices?.[0]?.message?.content ?? "";
+    if (text.trim() === "") {
+      throw new XuanError({
+        code: "LLM_ERROR",
+        message: "LLM 返回空回答",
+        stage: "llm",
+        recoverable: true,
+      });
+    }
+    return { text };
   }
 }

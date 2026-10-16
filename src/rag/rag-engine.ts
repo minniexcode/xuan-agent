@@ -173,4 +173,20 @@ export class RagEngine {
     // When nothing scores above zero this returns an empty citations array rather than a fabricated source (FR-RAG-02).
     return { query, mode: "keyword", citations };
   }
+
+  /**
+   * True when `query` matches a known terminology term (tag or title, bidirectional).
+   * Gates on-demand RAG retrieval so style-only follow-ups skip the search (FR-BAZI-05 rule 2).
+   */
+  hasTerminologyHit(query: string): boolean {
+    const q = normalize(query);
+    return this.load().some((chunk) => {
+      for (const tag of chunk.tags) {
+        const t = normalize(tag);
+        if (t !== "" && (q.includes(t) || t.includes(q))) return true;
+      }
+      const title = normalize(chunk.title);
+      return title !== "" && (q.includes(title) || title.includes(q));
+    });
+  }
 }

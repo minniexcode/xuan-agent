@@ -37,17 +37,17 @@ npm run test:smoke                   # 只跑冒烟
 
 ## Review 检查清单
 
-按"值得你重点判断"的顺序排列。**前 3 项是规格与实现的真实差距，不是 bug，但需要你决定是否接受。**
+差距已按 [ADR-0012](../adr.md) 收窄：✅ 已关闭（本轮实现）与 → V2（不再作为 V1 验收项）。
 
-### 1. `content.sections` 恒为空 ⚠️
+### 1. `content.sections` 恒为空 ✅ 已关闭
 
 `requirements.md` 的 FR-BAZI-03/04 要求"输出**结构化 section**，非自由文本"，验收标准写着"输出可被 CLI 按 section 渲染"。但 `xuan-agent.ts:112` 的 `toResult()` 里 `sections: []` 是写死的，LLM 返回的文本整个塞进 `summary`。
 
 **现状**：CLI 渲染的是自由 markdown 文本，可读性其实不错。**差距**：没有 section 结构，通俗/进阶模式的 section 清单（关键词 / 整体摘要 / 观察点…）没有真正落地。
 
-**修法**：让 LLM 输出 JSON（`structuredOutput` 能力已预留），或在 PromptManager 里约定 markdown 标题并由渲染器切分。这是 V1 收尾最实质的一个缺口。
+**已实现**：采用 Markdown 标题约定——PromptManager 要求 `## 标题` 分段，`section-parser.ts` 切分并填充 `sections` / `followupQuestions`，无标题时降级为 `summary`。
 
-### 2. SkillRegistry / Skill Manifest 未实现
+### 2. SkillRegistry / Skill Manifest 未实现 → V2
 
 `technical-design.md` §23 定义了 `SkillManifest`（`name` / `description` / `inputSchema` / `outputSchema` / `requiredCapabilities` / `safetyRules` / `execute`）。实际代码里 **Skill 是隐含的** —— 就是 `XuanAgent` 上的方法，`AnalysisResult.skill` 是硬编码的 `"bazi"`。
 
@@ -65,25 +65,23 @@ const terms = [chart.dayMaster, ...chart.tenGods.map((r) => r.tenGod)];
 
 **结论**：不是语义检索，命中质量高度依赖知识库标签和查询词的重合度。知识库一变大，噪声会迅速上升。修法有两条：给查询词加权重（日主低于十神），或换向量检索（`RagSearchResult.mode` 字段已预留降级标记）。
 
-### 4. 晚子时流派只有默认值，没有切换入口
+### 4. 晚子时流派只有默认值，没有切换入口 → V2
 
 `ADR-0010` 说"做成可切换（`LunarHour.provider`）"，但代码里没有暴露这个开关，`limitations` 里写的是"（School B，可切换）"——**可切换是文档承诺，代码还没给入口**。V1 个人自用无妨，但这是一处文档与代码的不一致。
 
-### 5. CLI 有一处越层调用 ⚠️
+### 5. CLI 越层调用 ✅ 已关闭
 
 `src/cli/commands/session.ts` 直接 `import { ConversationStore }` 并 `new ConversationStore(...)`，**绕过了 `XuanAgent`**。这违反"CLI 不直接调用存储"的分层铁律（`CLAUDE.md` / §14.2），而且 `ConversationStore` 并不在 SDK 导出列表里 —— 它是内部模块。
 
-**修法**：在 `XuanAgent` 上加 `clearSessions(sessionId?)`，CLI 改调它。（`config doctor` 不在此列 —— 它用的是 `diagnoseConfig`/`resolveConfig`，这两个**是** SDK 公开导出。）
+**已修复**：`XuanAgent.clearSessions()` 已加，`xuan session clear` 改调它；`xuan provider list` 也改经公开 SDK 的 `listProviders`。
 
-### 6. SafetyGuard 词表偏短
+### 6. SafetyGuard 词表偏短 → V2
 
 三条正则覆盖了最主要的断言式表达，但 §8 列的禁止项还包括"医疗/法律/投资/婚育建议""身份识别""敏感属性推断"等，这些**目前只靠系统 Prompt 兜底**，没有事后审计。V1 够用；V2 相术加入后（图像 → 身份/敏感属性风险）这块必须补。
 
-### 7. 大运 8 步、流年未实现
+### 7. 大运 8 步、流年未实现 → V2
 
-`FR-BAZI-02` 的输出字段清单里有"**流年：默认最近 10 年**"，但 `BaziChart` 里**没有流年字段**，`technical-design.md` 的 `BaziChart` 定义里也没有。大运是 8 步（`LUCK_STEPS = 8`），符合要求。
-
-**判断**：这更像"需求清单与类型设计不一致"——是文档该改，还是代码该补，需要你定。
+`FR-BAZI-02` 的「流年：最近 10 年」移 V2（见 ADR-0012）；大运 8 步（`LUCK_STEPS = 8`）符合要求。注：`technical-design.md` §17.3 的 `BaziChart` 定义**已有** `annualFortune?` 字段（本导览旧版曾误写为「没有」）。
 
 ---
 

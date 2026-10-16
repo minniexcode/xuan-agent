@@ -29,20 +29,16 @@ export interface RagCitation {
   hitNote: string;
 }
 
-/** Request to run an analysis skill (FR-BAZI-03 / FR-BAZI-04). */
+/**
+ * Request options for `analyzeBazi`. V1 honors only `sessionId`, `mode` and
+ * `temporary`; per-request provider/model/question and profile writes are V2
+ * (ADR-0012).
+ */
 export interface AnalysisRequest {
   /** Existing session to continue; omit to start a new one. */
   sessionId?: string;
-  userId?: string;
-  /** Skill identifier, e.g. "bazi". */
-  skill: string;
+  /** Output mode (defaults to the input's mode, then "advanced"). */
   mode: OutputMode;
-  /** Optional user question that steers the interpretation. */
-  question?: string;
-  provider?: ProviderName;
-  model?: string;
-  /** Persist the result to the user profile (requires confirmation). */
-  saveToProfile?: boolean;
   /** Run without persisting session state. */
   temporary?: boolean;
 }
@@ -69,7 +65,7 @@ export interface AnalysisResult<TStructured = unknown> {
   structured: TStructured;
   content: {
     summary: string;
-    /** Known gap: currently always empty; sectioned output is not yet produced. */
+    /** Titled sections parsed from the LLM output (empty when the answer has no `## ` headings). */
     sections: AnalysisSection[];
     /** Suggested follow-up questions for the same chart (FR-BAZI-05). */
     followupQuestions: string[];

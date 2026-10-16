@@ -104,4 +104,16 @@ describe("CLI 冒烟", () => {
     expect(parsed.structured.pillars.year.ganZhi).toBe("乙亥");
     expect(parsed.provider.name).toBe("mock");
   });
+
+  // R13: a missing profile must still emit pure JSON under `--json`.
+  it("`xuan profile view --json` 未找到时输出合法 JSON null", async () => {
+    vi.stubEnv("XUAN_DATA_DIR", mkdtempSync(join(tmpdir(), "xuan-smoke-profile-")));
+    const readOutput = captureStdout();
+    const program = buildProgram();
+    program.exitOverride();
+
+    await program.parseAsync(["node", "xuan", "profile", "view", "--json"]);
+
+    expect(JSON.parse(readOutput())).toBeNull();
+  });
 });

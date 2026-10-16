@@ -44,8 +44,21 @@ export function renderAnalysisResult(result: AnalysisResult<BaziChart>): string 
     renderBaziChart(result.structured),
     "",
     `解读（${result.provider.model}）：`,
-    result.content.summary.trim() || "（空）",
   ];
+
+  // Structured output renders each section; a plain answer falls back to `summary`.
+  if (result.content.sections.length > 0) {
+    for (const section of result.content.sections) {
+      lines.push("", `### ${section.title}`, section.body.trim() || "（空）");
+    }
+  } else {
+    lines.push(result.content.summary.trim() || "（空）");
+  }
+
+  if (result.content.followupQuestions.length > 0) {
+    lines.push("", "可以继续追问：", ...result.content.followupQuestions.map((q) => `  - ${q}`));
+  }
+
   if (result.citations.length > 0) {
     lines.push("", "参考依据：");
     result.citations.forEach((citation, i) => {

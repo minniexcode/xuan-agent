@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { listProviders } from "../../providers/provider-catalog.js";
+import { listProviders } from "../../index.js";
 import { renderJson } from "../renderers/json-renderer.js";
 import { renderProviderList } from "../renderers/provider-renderer.js";
 

@@ -71,3 +71,13 @@ V1 只做八字，相术（面相/手相）整体移入 V2。原因是玄枢的�
 - 状态：已采纳（2026-10-15）
 
 **取代 ADR-0005。** V1 的 LLM 调用走自研 `LlmProvider` 接口 + `ProviderFactory`（openai-compatible adapter 直接 `fetch`），会话状态走自研 `ConversationStore`（本地 JSON + 原子写入），不引入 LangChain.js / LangGraph.js。原因是 V1 流程是线性的（校验 → 排盘 → Prompt → LLM → 审计 → 存会话），用不上 LangGraph 的图编排与 checkpoint；自研 Provider 抽象只有约百行，已覆盖 V1 需要的 text/streaming/structured output 能力，少一个重依赖、行为更可预期。LangChain/LangGraph 留待流程真正复杂（多步工具链、并行多 Provider、细粒度 checkpoint）时再评估引入。
+
+## ADR-0012：V1 范围收窄（个人 CLI happy-path）；sections 补实现，其余移 V2
+
+- 状态：已采纳（2026-10-16）
+
+对照 [`v1-scope-review.md`](v1-scope-review.md) 的审查结论，V1 范围正式收窄为「个人 CLI 的 happy-path 排盘 + 解读 + 同盘追问」。结构化 sections（FR-BAZI-03/04 的验收要求）本轮补实现；以下原文档承诺正式移入 V2：节气信息、流年（最近 10 年）、大运步数/流年范围可配置、Skill 注册（**取代 ADR-0004 对 V1 的生效义务**）、CLI 交互追问与 `--new`/`--provider`/`--model`/`--save-profile`、档案回填（FR-MEM-02 的「省去重复输入」目标）。同时移除 `both` 输出模式（FR-BAZI-04 规则 3 已要求一次一种模式），运行时最低版本升到 Node ≥ 22.12（依赖 commander 15 要求）。
+
+隐私边界澄清（对齐 ADR-0008）：**短期会话**（含盘面输入）自动本地保存、可清理、不自动过期（FR-MEM-01），服务同盘追问；**长期档案**需显式确认（FR-MEM-02）；日志对密钥与出生/档案字段脱敏。ADR-0008 的「默认不持久化出生信息」针对的是长期档案与对外输出，不否定同盘追问所需的本地会话缓存。
+
+原因是审查发现实现已偏离书面规格，而偏离只写进了代码注释与导览、未走需求变更闭环；与其把未实现的承诺继续当验收项，不如按个人自用边界正式收窄并同步上游规格。

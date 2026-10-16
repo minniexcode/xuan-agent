@@ -49,7 +49,10 @@ export function registerProfileCommand(program: Command): void {
       const agent = createXuanAgent();
       const found = await agent.getProfile(options.user ?? "default");
       if (found === null) {
-        process.stdout.write(`未找到档案：${options.user ?? "default"}\n`);
+        // `--json` must stay pure JSON, so a missing profile serializes as `null`.
+        process.stdout.write(
+          options.json ? `${renderJson(null)}\n` : `未找到档案：${options.user ?? "default"}\n`,
+        );
         return;
       }
       const output = options.json ? renderJson(found) : renderProfile(found);

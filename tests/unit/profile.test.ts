@@ -100,4 +100,15 @@ describe("XuanAgent 档案", () => {
       ),
     ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
   });
+
+  // R03: ids are identifiers, not file paths — a traversal id must be rejected.
+  it("拒绝路径穿越 userId", async () => {
+    const agent = makeAgent();
+    await expect(
+      agent.saveProfile(
+        { userId: "../escaped", birth, preferences: { mode: "advanced", provider: "mock" } },
+        { confirm: true },
+      ),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+  });
 });

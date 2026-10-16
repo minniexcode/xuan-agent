@@ -53,4 +53,20 @@ describe("redactObject", () => {
     expect(redacted.provider.apiKey).toBe(REDACTED);
     expect(redacted.list[0]?.token).toBe(REDACTED);
   });
+
+  // R15: birth info, location and profile fields must be redacted too, not just secret keys.
+  it("脱敏出生信息与档案字段", () => {
+    const redacted = redactObject({
+      date: "1995-03-12",
+      time: "08:30",
+      place: "北京市",
+      userId: "me",
+      birth: { date: "1995-03-12", place: "北京市" },
+    });
+    expect(redacted.date).toBe(REDACTED);
+    expect(redacted.time).toBe(REDACTED);
+    expect(redacted.place).toBe(REDACTED);
+    expect(redacted.userId).toBe(REDACTED);
+    expect(redacted.birth).toBe(REDACTED);
+  });
 });

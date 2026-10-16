@@ -215,7 +215,7 @@ V1 的 `package.json` 应表达以下契约：
     "LICENSE"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22.12"
   }
 }
 ```
@@ -394,9 +394,9 @@ export interface BaziChart {
   hiddenStems: Record<string, HeavenlyStem[]>;
   fiveElements: FiveElementDistribution;
   tenGods: TenGodRelation[];
-  solarTerms?: SolarTermInfo;
+  solarTerms?: SolarTermInfo; // V2（见 ADR-0012）
   luckPillars?: LuckPillar[];
-  annualFortune?: AnnualFortune[];
+  annualFortune?: AnnualFortune[]; // V2（见 ADR-0012）
   symbolicStars?: SymbolicStar[]; // V2（库无命盘神煞，需自研）
   limitations: string[];
 }
@@ -413,16 +413,12 @@ export interface BaziChart {
 ```ts
 export interface AnalysisRequest {
   sessionId?: string;
-  userId?: string;
-  skill: string;
   mode: OutputMode;
-  question?: string;
-  provider?: ProviderName;
-  model?: string;
-  saveToProfile?: boolean;
   temporary?: boolean;
 }
 ```
+
+`userId` / `skill` / `question` / `provider` / `model` / `saveToProfile` 移 V2（见 ADR-0012）。
 
 ### 17.5 `AnalysisResult`
 
@@ -528,8 +524,8 @@ export interface XuanAgent {
 
 | 命令 | 必填参数 | 可选参数 | 输出 |
 | --- | --- | --- | --- |
-| `xuan bazi analyze` | `--date`、`--gender`、`--calendar`、`--time` 或 `--time-unknown` | `--place`、`--mode`、`--provider`、`--model`、`--json`、`--save-profile` | 八字结构化摘要 + 解读（默认 `advanced`） |
-| `xuan bazi ask` | `--session`、`--question` | `--mode`、`--provider`、`--json` | 同盘追问结果 |
+| `xuan bazi analyze` | `--date`、`--gender`、`--calendar`、`--time` 或 `--time-unknown` | `--place`、`--mode`、`--json` | 八字结构化摘要 + 解读（默认 `advanced`） |
+| `xuan bazi ask` | `--session`、`--question` | `--mode`、`--json` | 同盘追问结果 |
 | `xuan rag search` | `--query` | `--skill`、`--top-k`、`--json` | 引用列表 |
 | `xuan provider list` | 无 | `--json` | Provider 能力表 |
 | `xuan profile view` | 无 | `--user`、`--json` | 用户档案 |
@@ -538,7 +534,7 @@ export interface XuanAgent {
 | `xuan session clear` | 无 | `--session`、`--all` | 清理结果 |
 | `xuan config doctor` | 无 | `--json` | 配置健康检查 |
 
-`xuan xiangshu analyze`（相术）与 `xuan provider compare`（多 Provider 对比）为 V2 / V1 完成后能力，V1 不交付。
+`xuan xiangshu analyze`（相术）与 `xuan provider compare`（多 Provider 对比）为 V2 / V1 完成后能力，V1 不交付。`--provider` / `--model` / `--save-profile` 与 `--new` 亦为 V2（见 ADR-0012）。
 
 ### 19.2 CLI 输出模式
 
@@ -726,6 +722,8 @@ ProviderFactory 负责：
 - Base URL Provider 统一走 openai-compatible adapter。
 
 ## 23. Skill Manifest 详细设计
+
+> **V2**：Skill 注册机制移 V2（见 ADR-0012，取代 ADR-0004 对 V1 的生效义务）。V1 以 `XuanAgent` facade 方法提供 bazi/profile/rag，不构成 `SkillRegistry`。
 
 ### 23.1 Manifest 结构
 

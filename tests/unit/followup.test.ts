@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { ConversationStore } from "../../src/conversations/index.js";
 import { createXuanAgent } from "../../src/index.js";
 import { createLogger } from "../../src/logging/index.js";
@@ -93,6 +93,31 @@ describe("XuanAgent 追问（mock Provider）", () => {
     const style = await agent.askFollowup({ sessionId: analyzed.sessionId, question: "说人话" });
     expect(style.metadata.ragUsed).toBe(false);
     expect(style.citations).toEqual([]);
+  });
+
+  // FR-BAZI-05 rule 2 (stronger form): a style-only question must not even call
+  // `search` — the terminology gate short-circuits retrieval.
+  it("风格类追问不调用 search（按需检索）", async () => {
+    const engine = new RagEngine({ seedDir });
+    const searchSpy = vi.spyOn(engine, "search");
+    const agent = createXuanAgent({
+      config: { provider: "mock" },
+      logger: silent,
+      conversationStore: new ConversationStore(sessionsDir),
+      ragEngine: engine,
+    });
+    const analyzed = await agent.analyzeBazi({
+      date: "1995-03-12",
+      time: "08:30",
+      gender: "male",
+      calendar: "solar",
+    });
+    // The analyze step (advanced mode) legitimately searches for citations; reset so
+    // the assertion below targets only the follow-up call.
+    searchSpy.mockClear();
+
+    await agent.askFollowup({ sessionId: analyzed.sessionId, question: "说人话" });
+    expect(searchSpy).not.toHaveBeenCalled();
   });
 
   // FR-BAZI-05 CLI rule: with no session id, the most recent session is continued.

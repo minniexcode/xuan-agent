@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Xuan-agent（玄枢，"Five Arts AI Agent"）is an AI agent for traditional Chinese metaphysics / five-arts（五术）exploration. V1 implements **BaZi（八字）**: deterministic chart calculation + neutral, citation-backed interpretation, same-chart follow-up (`ask`), local session memory, user profiles, and keyword RAG. V1 is **implemented** (Milestones 1–6). **Physiognomy（相术）** and multi-provider comparison are V2, out of scope.
+Xuan-agent（玄枢，"Five Arts AI Agent"）is an AI agent for traditional Chinese metaphysics / five-arts（五术）exploration. V1 implements **BaZi（八字）**: deterministic chart calculation + neutral, citation-backed interpretation, same-chart follow-up (`ask`), local session memory, user profiles, and keyword RAG. V1 is **main-path runnable** (personal CLI: chart + interpretation + same-chart follow-up); acceptance scope per ADR-0012. Structured sections are shipped; 节气/流年, Skill registry, CLI interaction and profile prefill are V2. **Physiognomy（相术）** and multi-provider comparison are V2, out of scope.
 
 ## Non-negotiable principle: separate calculation from interpretation
 
@@ -14,7 +14,7 @@ Xuan-agent（玄枢，"Five Arts AI Agent"）is an AI agent for traditional Chin
 
 ## Tech stack (implemented)
 
-- TypeScript 5.9, ESM-only (`"type": "module"`), Node ≥ 20. Single npm package `xuan-agent`: CLI `xuan` + SDK `xuan-agent`.
+- TypeScript 5.9, ESM-only (`"type": "module"`), Node ≥ 22.12. Single npm package `xuan-agent`: CLI `xuan` + SDK `xuan-agent`.
 - BaZi: `tyme4ts` (behind `BaziCalculator`). Schema: `zod` v4. CLI: `commander`. Build: `tsup`. Lint/format: `biome` v2. Tests: `vitest`.
 - **No LangChain.js / LangGraph.js** — hand-rolled `LlmProvider` + `ProviderFactory` (openai-compatible adapter via `fetch`); V1 flows are linear (ADR-0011).
 - Relative imports use the `.js` extension even inside `.ts` files (ESM + `verbatimModuleSyntax`).
