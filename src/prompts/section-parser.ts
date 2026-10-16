@@ -9,6 +9,8 @@ export interface ParsedSections {
 
 /** A Markdown `## 标题` line (only H2 is a section boundary, matching the prompt instruction). */
 const HEADING = /^##\s+/;
+/** The agreed heading whose bullets become follow-up questions (must match `sectionsInstruction`). */
+const FOLLOWUP_TITLE = "可继续追问";
 
 /**
  * Split a Markdown interpretation into sections on `## 标题` boundaries.
@@ -29,11 +31,19 @@ export function parseSections(text: string): ParsedSections {
   const flush = () => {
     if (currentTitle === null) return;
     const body = currentBody.join("\n").trim();
-    if (currentTitle.includes("追问")) {
+    // Only the exact agreed heading is a question list — an arbitrary heading that
+    // merely contains "追问" (e.g. "追问解答") is a normal section, so its body is
+    // never dropped.
+    if (currentTitle === FOLLOWUP_TITLE) {
+      const leftovers: string[] = [];
       for (const line of currentBody) {
         const bullet = line.trim().match(/^[-*•]\s+(.+)$/);
         if (bullet?.[1] !== undefined) followupQuestions.push(bullet[1].trim());
+        else leftovers.push(line);
       }
+      // Bullet-free text under the follow-up heading is kept rather than discarded.
+      const rest = leftovers.join("\n").trim();
+      if (rest !== "") sections.push({ title: currentTitle, body: rest });
     } else if (body !== "") {
       sections.push({ title: currentTitle, body });
     }

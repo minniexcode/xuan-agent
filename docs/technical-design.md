@@ -341,7 +341,7 @@ V1 应使用 TypeScript 类型 + 运行时 schema 双层约束。运行时 schem
 ### 17.1 通用枚举
 
 ```ts
-export type OutputMode = "beginner" | "advanced" | "both";
+export type OutputMode = "beginner" | "advanced";
 export type CalendarType = "solar" | "lunar";
 export type Gender = "male" | "female" | "unspecified";
 export type XiangshuType = "face" | "palm"; // V2 前瞻

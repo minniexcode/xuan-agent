@@ -27,4 +27,19 @@ describe("parseSections", () => {
     expect(result.sections).toEqual([]);
     expect(result.followupQuestions).toEqual([]);
   });
+
+  // P2: only the agreed heading is a question list — a heading that merely contains
+  // "追问" (e.g. "追问解答") must keep its body as a normal section.
+  it("标题含「追问」但非约定标题时保留正文", () => {
+    const result = parseSections("## 追问解答\n这是一段正常正文。");
+    expect(result.sections).toEqual([{ title: "追问解答", body: "这是一段正常正文。" }]);
+    expect(result.followupQuestions).toEqual([]);
+  });
+
+  // P2: a bullet-free body under the follow-up heading must not be dropped.
+  it("可继续追问无列表项时保留正文", () => {
+    const result = parseSections("## 可继续追问\n这是说明性文字，不是列表。");
+    expect(result.sections).toEqual([{ title: "可继续追问", body: "这是说明性文字，不是列表。" }]);
+    expect(result.followupQuestions).toEqual([]);
+  });
 });
