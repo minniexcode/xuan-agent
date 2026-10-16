@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { XuanError } from "../errors/index.js";
 import { type UserProfile, UserProfileSchema } from "../schemas/profile.js";
+import { assertSafeId } from "../storage/id-guard.js";
 import { readJson, removeFile, writeJsonAtomic } from "../storage/json-store.js";
 
 /** Local JSON storage for user profiles: `<profilesDir>/<userId>.json` (FR-MEM-02). */
@@ -9,6 +10,7 @@ export class ProfileStore {
 
   /** File path for a single profile. */
   private pathFor(userId: string): string {
+    assertSafeId(userId, this.dir, "档案 ID");
     return join(this.dir, `${userId}.json`);
   }
 

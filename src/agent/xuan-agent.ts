@@ -12,7 +12,7 @@ import { ConversationStore } from "../conversations/index.js";
 import { XuanError } from "../errors/index.js";
 import { createLogger, type Logger } from "../logging/index.js";
 import { ProfileStore } from "../profiles/index.js";
-import { PromptManager } from "../prompts/index.js";
+import { PromptManager, parseSections } from "../prompts/index.js";
 import { ProviderFactory } from "../providers/index.js";
 import type { LlmProvider } from "../providers/provider.types.js";
 import type { RagSearchOptions, RagSearchResult } from "../rag/index.js";
@@ -77,6 +77,8 @@ export interface XuanAgent {
   saveProfile(input: ProfileInput, options?: SaveProfileOptions): Promise<UserProfile>;
   /** Delete a profile; requires explicit confirm (FR-MEM-02). */
   deleteProfile(userId?: string, options?: SaveProfileOptions): Promise<void>;
+  /** Clear one session, or all sessions when `sessionId` is omitted (FR-MEM-01). */
+  clearSessions(sessionId?: string): Promise<void>;
 }
 
 /**
@@ -165,10 +167,7 @@ export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
       mode,
       structured: chart,
       content: {
-        summary: outputText,
-        // V1 emits a single summary string; sectioned output is not produced yet.
-        sections: [],
-        followupQuestions: [],
+        ...parseSections(outputText),
         boundaryNotice: BOUNDARY_NOTICE,
       },
       citations,
@@ -206,7 +205,19 @@ export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
         });
       }
 
-      const chart = calculator.calculate(parsed.data);
+      let chart: BaziChart;
+      try {
+        chart = calculator.calculate(parsed.data);
+      } catch (err) {
+        // A valid input the library cannot compute is a calculation failure, not an
+        // input error — and it must stop before the LLM is called (FR-BAZI-02).
+        throw XuanError.from(err, {
+          code: "CALCULATION_ERROR",
+          message: "排盘失败",
+          stage: "calculation",
+          recoverable: false,
+        });
+      }
       const mode = request.mode ?? parsed.data.mode ?? "advanced";
       const llm = getProvider();
       // Advanced mode attaches RAG citations; beginner mode skips retrieval.
@@ -273,9 +284,10 @@ export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
       const chart = state.chart;
       const mode = input.mode ?? state.mode ?? "advanced";
 
-      // RAG is on-demand: only cited when the follow-up hits terminology/evidence (FR-BAZI-05).
-      const ragResult = await ragEngine.search({ query: input.question, topK: 3 });
-      const citations = ragResult.citations;
+      // RAG is on-demand: only retrieved when the follow-up hits known terminology (FR-BAZI-05 rule 2).
+      const citations = ragEngine.hasTerminologyHit(input.question)
+        ? (await ragEngine.search({ query: input.question, topK: 3 })).citations
+        : [];
 
       const llm = getProvider();
       const { input: promptInput, version } = promptManager.buildFollowupPrompt(
@@ -386,6 +398,11 @@ export function createXuanAgent(options: XuanAgentOptions = {}): XuanAgent {
         });
       }
       await getProfileStore().delete(userId);
+    },
+
+    /** Clear one session, or all when `sessionId` is omitted (FR-MEM-01's `xuan session clear`). */
+    async clearSessions(sessionId?: string): Promise<void> {
+      await getConversationStore().clear(sessionId);
     },
   };
 }

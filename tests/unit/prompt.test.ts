@@ -29,6 +29,8 @@ describe("PromptManager", () => {
     const advanced = promptManager.buildBaziPrompt(chart, "advanced");
     expect(beginner.input.messages[0]?.content).toContain("少术语");
     expect(advanced.input.messages[0]?.content).toContain("专业术语");
-    expect(beginner.version).toBe("bazi-beginner-v0");
+    expect(beginner.version).toBe("bazi-beginner-v1");
+    // Structured-output instruction: the prompt must ask for `## ` sections + follow-ups.
+    expect(beginner.input.messages[0]?.content).toContain("可继续追问");
   });
 });

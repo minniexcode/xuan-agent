@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { XuanError } from "../errors/index.js";
+import { assertSafeId } from "../storage/id-guard.js";
 import { readJson, removeDir, removeFile, writeJsonAtomic } from "../storage/json-store.js";
 import { type ConversationState, ConversationStateSchema } from "./conversation-state.js";
 
@@ -14,6 +15,7 @@ export class ConversationStore {
 
   /** File path for a single session's state. */
   private pathFor(sessionId: string): string {
+    assertSafeId(sessionId, this.dir, "会话 ID");
     return join(this.dir, `${sessionId}.json`);
   }
 

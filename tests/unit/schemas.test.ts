@@ -56,4 +56,23 @@ describe("BirthInputSchema（FR-BAZI-01）", () => {
     delete noCalendar.calendar;
     expect(BirthInputSchema.safeParse(noCalendar).success).toBe(false);
   });
+
+  // "both" was removed from OutputMode in the V1 scope narrowing.
+  it("拒绝已移除的 both 模式", () => {
+    expect(BirthInputSchema.safeParse({ ...valid, mode: "both" }).success).toBe(false);
+  });
+
+  // R07: a literal false must not smuggle a fabricated hour pillar past validation.
+  it("timeUnknown:false 被拒（缺 time 时不伪造时柱）", () => {
+    const noTime: Record<string, unknown> = { ...valid };
+    delete noTime.time;
+    noTime.timeUnknown = false;
+    expect(BirthInputSchema.safeParse(noTime).success).toBe(false);
+  });
+
+  // R09: impossible solar dates are rejected before reaching the calculator.
+  it("拒绝无效公历日期", () => {
+    expect(BirthInputSchema.safeParse({ ...valid, date: "1995-02-30" }).success).toBe(false);
+    expect(BirthInputSchema.safeParse({ ...valid, date: "1995-13-12" }).success).toBe(false);
+  });
 });

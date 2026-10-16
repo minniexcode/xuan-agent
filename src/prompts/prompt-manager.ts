@@ -22,6 +22,23 @@ function modeInstruction(mode: OutputMode): string {
   return "面向有基础的爱好者：直接使用专业术语（四柱、十神、五行、大运），展开结构与依据。";
 }
 
+/**
+ * Structured-output instruction: ask the LLM to segment its answer into `## 标题`
+ * blocks and finish with a `## 可继续追问` bullet list. The section parser degrades
+ * to plain text when headings are absent (FR-BAZI-03 / FR-BAZI-04).
+ */
+function sectionsInstruction(mode: OutputMode): string {
+  const sections =
+    mode === "beginner"
+      ? "关键词、整体摘要、观察点（性格 / 行为 / 沟通 / 关系 / 成长中择要）"
+      : "四柱结构、日主与月令、五行分布与生克、十神组合、大运与流年观察";
+  return [
+    "请用 Markdown 二级标题（`## 标题`）分段输出解读，标题用中文，依次覆盖：",
+    `  ${sections}。`,
+    "最后加一段 `## 可继续追问`，列出 2–3 个可继续追问的问题，每行一条、以 `- ` 开头。",
+  ].join("\n");
+}
+
 /** Render retrieved RAG citations into a prompt section, keeping excerpt and interpretation distinct. */
 function formatCitations(citations: RagCitation[]): string {
   if (citations.length === 0) {
@@ -63,6 +80,7 @@ export class PromptManager {
       JSON.stringify(chart),
       "",
       modeInstruction(mode),
+      sectionsInstruction(mode),
     ];
     // Beginner mode omits classical citations; advanced mode injects RAG evidence.
     // See FR-RAG-02 rule 2 (FR-BAZI-04's "明确不做" line on RAG citations is stale).
@@ -76,7 +94,7 @@ export class PromptManager {
         system: SAFETY_SYSTEM,
         messages: [{ role: "user", content: sections.join("\n") }],
       },
-      version: `bazi-${mode}-v0`,
+      version: `bazi-${mode}-v1`,
     };
   }
 

@@ -4,8 +4,8 @@ import { z } from "zod";
 // Common enums
 // ---------------------------------------------------------------------------
 
-/** Output verbosity; "both" emits beginner and advanced content together. */
-export const OutputModeSchema = z.enum(["beginner", "advanced", "both"]);
+/** Output mode (FR-BAZI-03 beginner / FR-BAZI-04 advanced). V1 emits one mode per request. */
+export const OutputModeSchema = z.enum(["beginner", "advanced"]);
 /** Output mode (FR-BAZI-03 beginner / FR-BAZI-04 advanced). */
 export type OutputMode = z.infer<typeof OutputModeSchema>;
 
@@ -33,6 +33,15 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 /** 24-hour HH:mm time. */
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+/** True when `y-m-d` is a real Gregorian calendar date (leap-year aware). */
+function isValidSolarDate(year: number, month: number, day: number): boolean {
+  if (month < 1 || month > 12) return false;
+  const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  const monthLengths = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  const maxDay = monthLengths[month - 1];
+  return day >= 1 && maxDay !== undefined && day <= maxDay;
+}
+
 /**
  * Strict validation: ambiguous dates are always rejected (the interaction layer
  * asks the user to clarify, never guesses). See docs/requirements.md FR-BAZI-01.
@@ -45,7 +54,7 @@ export const BirthInputSchema = z
     /** Birth time; omitted when the time is unknown. */
     time: z.string().regex(TIME_PATTERN, "出生时间必须为 HH:mm").optional(),
     /** Set true when the birth time is unknown; mutually exclusive with `time`. */
-    timeUnknown: z.boolean().optional(),
+    timeUnknown: z.literal(true).optional(),
     gender: GenderSchema,
     /** V1: annotation only, not used in calculation. */
     place: z.string().optional(),
@@ -60,7 +69,17 @@ export const BirthInputSchema = z
   // explicitly mark it unknown — never both, never neither.
   .refine((v) => (v.time === undefined) !== (v.timeUnknown === undefined), {
     message: "time 与 timeUnknown 必须二选一",
-  });
+  })
+  // Reject impossible solar dates (e.g. 1995-02-30) before they reach the calculator;
+  // lunar validity is judged by the library (FR-BAZI-01).
+  .refine(
+    (v) => {
+      if (v.calendar !== "solar") return true;
+      const [year, month, day] = v.date.split("-").map(Number) as [number, number, number];
+      return isValidSolarDate(year, month, day);
+    },
+    { message: "出生日期不是有效的公历日期" },
+  );
 
 /** Normalized input used for chart calculation (defaults already filled). */
 export type BirthInput = z.infer<typeof BirthInputSchema>;

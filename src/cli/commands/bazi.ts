@@ -41,7 +41,7 @@ export function registerBaziCommand(program: Command): void {
     .requiredOption("--gender <male|female|unspecified>", "性别")
     .requiredOption("--calendar <solar|lunar>", "历法类型", "solar")
     .option("--place <place>", "出生地（仅备注，不参与计算）")
-    .option("--mode <beginner|advanced|both>", "输出模式", "advanced")
+    .option("--mode <beginner|advanced>", "输出模式", "advanced")
     .option("--leap-month", "农历闰月（仅 --calendar lunar 时生效）")
     .option("--json", "JSON 输出")
     .action(async (options: AnalyzeOptions) => {

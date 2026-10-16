@@ -61,4 +61,12 @@ describe("ConversationStore", () => {
     await store.clear();
     expect(await store.loadLatest()).toBeUndefined();
   });
+
+  // R03: a session id must not be able to escape the store directory.
+  it("拒绝路径穿越 sessionId", async () => {
+    const store = new ConversationStore(dir);
+    await expect(store.save(state({ sessionId: "../escaped" }))).rejects.toMatchObject({
+      code: "VALIDATION_ERROR",
+    });
+  });
 });
