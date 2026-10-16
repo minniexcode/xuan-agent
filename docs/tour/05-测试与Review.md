@@ -41,9 +41,9 @@ npm run test:smoke                   # 只跑冒烟
 
 ### 1. `content.sections` 恒为空 ✅ 已关闭
 
-`requirements.md` 的 FR-BAZI-03/04 要求"输出**结构化 section**，非自由文本"，验收标准写着"输出可被 CLI 按 section 渲染"。但 `xuan-agent.ts:112` 的 `toResult()` 里 `sections: []` 是写死的，LLM 返回的文本整个塞进 `summary`。
+`requirements.md` 的 FR-BAZI-03/04 要求"输出**结构化 section**，非自由文本"，验收标准写着"输出可被 CLI 按 section 渲染"。此前 `toResult()` 里 `sections: []` 是写死的，LLM 返回的文本整个塞进 `summary`。
 
-**现状**：CLI 渲染的是自由 markdown 文本，可读性其实不错。**差距**：没有 section 结构，通俗/进阶模式的 section 清单（关键词 / 整体摘要 / 观察点…）没有真正落地。
+**旧实现**：CLI 只渲染自由 markdown 文本，通俗/进阶模式的 section 清单（关键词 / 整体摘要 / 观察点…）没有落地。
 
 **已实现**：采用 Markdown 标题约定——PromptManager 要求 `## 标题` 分段，`section-parser.ts` 切分并填充 `sections` / `followupQuestions`，无标题时降级为 `summary`。
 
@@ -67,11 +67,11 @@ const terms = [chart.dayMaster, ...chart.tenGods.map((r) => r.tenGod)];
 
 ### 4. 晚子时流派只有默认值，没有切换入口 → V2
 
-`ADR-0010` 说"做成可切换（`LunarHour.provider`）"，但代码里没有暴露这个开关，`limitations` 里写的是"（School B，可切换）"——**可切换是文档承诺，代码还没给入口**。V1 个人自用无妨，但这是一处文档与代码的不一致。
+`ADR-0010` 原要求"做成可切换（`LunarHour.provider`）"；切换入口已由 ADR-0012 正式延期到 V2。V1 保留默认（次日）与 `limitations` 标注"（School B，可切换）"，标注仍在生效。
 
 ### 5. CLI 越层调用 ✅ 已关闭
 
-`src/cli/commands/session.ts` 直接 `import { ConversationStore }` 并 `new ConversationStore(...)`，**绕过了 `XuanAgent`**。这违反"CLI 不直接调用存储"的分层铁律（`CLAUDE.md` / §14.2），而且 `ConversationStore` 并不在 SDK 导出列表里 —— 它是内部模块。
+此前 `src/cli/commands/session.ts` 直接 `import { ConversationStore }` 并 `new ConversationStore(...)`，**绕过了 `XuanAgent`**。这违反"CLI 不直接调用存储"的分层铁律（`CLAUDE.md` / §14.2），而且 `ConversationStore` 并不在 SDK 导出列表里 —— 它是内部模块。
 
 **已修复**：`XuanAgent.clearSessions()` 已加，`xuan session clear` 改调它；`xuan provider list` 也改经公开 SDK 的 `listProviders`。
 
